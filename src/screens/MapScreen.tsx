@@ -13,7 +13,7 @@ import { canSpeak, keepAwake, speak, stopSpeaking } from '@/lib/speech';
 import { directionsUrl, isIOS } from '@/lib/maps';
 import { useTimeline } from '@/lib/plan-state';
 import { romeParts } from '@/lib/time';
-import { downloadRoma, estimateMB, mapDownloadInfo, type MapDownload } from '@/lib/offline-map';
+import { OfflineCard } from '@/components/OfflineCard';
 import { cachedPois, footRoute, footRouteVia, formatDuration, geocodeCached, nearest, refreshPois, reverseGeocode, searchPlaces, type Found, type Poi, type PoiKind, type Route } from '@/lib/osm';
 
 const DAY_COLOR: Record<DayNum, string> = { 1: 'var(--terracotta)', 2: 'var(--ocra)', 3: 'var(--pino)', 4: 'var(--vino)', 5: 'var(--tinta-suave)' };
@@ -102,35 +102,6 @@ function useOnline(): boolean {
     return () => { window.removeEventListener('online', u); window.removeEventListener('offline', d); };
   }, []);
   return on;
-}
-
-/** Mapa sin conexión: descarga Roma entera (estilo, iconos, letras y teselas hasta el zoom 14). */
-function OfflineMapCard() {
-  const [info, setInfo] = useState<MapDownload | undefined>();
-  const [prog, setProg] = useState<[number, number] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const online = useOnline();
-  useEffect(() => { void mapDownloadInfo().then(setInfo); }, []);
-  const go = async () => {
-    setErr(null); setProg([0, 1]);
-    try { setInfo(await downloadRoma((d, t) => setProg([d, t]))); }
-    catch { setErr('No se ha podido descargar. Prueba con wifi o con más cobertura.'); }
-    setProg(null);
-  };
-  return (
-    <section class="card stack" style={{ gap: '0.5rem' }}>
-      <h2>Mapa sin conexión</h2>
-      {info
-        ? <p class="small"><span class="chip ok">Descargado</span> {info.tiles.toLocaleString('es-ES')} teselas · {(info.bytes / 1048576).toFixed(0)} MB · {new Date(info.at).toLocaleDateString('es-ES')}. El mapa de Roma funciona sin datos.</p>
-        : <p class="small">Descarga Roma una vez con wifi (unos {estimateMB()} MB) y el mapa funcionará sin datos ni cobertura. La ruta a pie y el buscador sí necesitan conexión.</p>}
-      {prog && <progress value={prog[0]} max={prog[1]} aria-label="Descargando" style={{ width: '100%' }} />}
-      {err && <p class="small pending">{err}</p>}
-      <button type="button" class="btn primary" disabled={!!prog || !online} onClick={() => void go()}>
-        <Icon name="map" /> {prog ? `Descargando ${Math.round((prog[0] / prog[1]) * 100)} %` : info ? 'Actualizar descarga' : 'Descargar Roma'}
-      </button>
-      {!online && <p class="small muted">Sin conexión ahora mismo.</p>}
-    </section>
-  );
 }
 
 const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -394,7 +365,7 @@ export function MapScreen() {
       {route && (
         <section class="card stack" role="status" style={{ gap: '0.5rem' }}>
           <div class="row spread">
-            <span><b class="num">{formatDuration(route.durationS)}</b> a pie · <span class="num">{formatDistance(route.distanceM)}</span>{dayRoute ? <span class="small muted"> · {dayRoute.length} paradas</span> : <span class="small muted"> {originLabel}</span>}</span>
+            <span><b class="num">{formatDuration(route.durationS)}</b> a pie · <span class="num">{formatDistance(route.distanceM)}</span>{route.offline && <span class="chip" title="Calculada con las calles guardadas en el móvil"> sin conexión</span>}{dayRoute ? <span class="small muted"> · {dayRoute.length} paradas</span> : <span class="small muted"> {originLabel}</span>}</span>
             <button type="button" class="btn ghost" onClick={clearRoute}>Quitar ruta</button>
           </div>
           {dest && !navigating && <button type="button" class="btn primary" onClick={startNav}><Icon name="walk" /> Empezar a caminar</button>}
@@ -433,7 +404,7 @@ export function MapScreen() {
       )}
       <NearMe filter={filter} setFilter={(f) => { setFilter(f); setNearOnMap(true); setPicked(null); }} items={near} originLabel={originLabel || 'desde el centro de Roma'} onLocate={() => void doLocate()} locating={locating} hasMe={!!me}
         onShow={(n) => { setNearOnMap(true); setFocus({ lat: n.lat, lng: n.lng, key: Date.now() }); setPicked({ kind: 'poi', item: n, filter }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} poiAge={poiAge} />
-      <OfflineMapCard />
+      <OfflineCard />
       <p class="small muted">Mapa © OpenStreetMap y OpenFreeMap. Rutas: routing.openstreetmap.de. Buscador: Photon.</p>
     </div>
   );

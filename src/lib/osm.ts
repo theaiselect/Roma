@@ -3,6 +3,7 @@
 //  · Buscador: Photon (komoot).  · Fuentes, baños, farmacias, cafés y heladerías: Overpass.
 // Todo falla con elegancia: sin red, la app sigue con lo guardado y con los enlaces a Google/Apple Maps.
 import { getMeta, setMeta } from '@/lib/db';
+import { offlineRoute, reverseOffline, searchOffline } from '@/lib/offline-data'; // solo se usan al llamar (hay un ciclo de módulos inofensivo)
 import { distanceM, type LatLng } from '@/lib/geo';
 import { parseSteps, type OsrmStep, type Step } from '@/lib/nav';
 
@@ -28,7 +29,7 @@ async function getJson<T>(url: string, init?: RequestInit, timeoutMs = 9000): Pr
 
 // ── Ruta a pie ──────────────────────────────────────────────────
 export interface Leg { distanceM: number; durationS: number }
-export interface Route { distanceM: number; durationS: number; coords: [number, number][]; steps: Step[]; legs: Leg[] }
+export interface Route { distanceM: number; durationS: number; coords: [number, number][]; steps: Step[]; legs: Leg[]; offline?: boolean }
 
 interface OsrmResponse {
   code: string;
@@ -47,9 +48,15 @@ export function parseOsrm(r: OsrmResponse | null): Route | null {
 /** Ruta a pie por varios puntos, en orden (sirve para «la ruta del día»). Con un solo tramo es la ruta de siempre. */
 export async function footRouteVia(points: LatLng[]): Promise<Route | null> {
   if (points.length < 2) return null;
-  const path = points.map((p) => `${p.lng},${p.lat}`).join(';');
-  const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${path}?overview=full&geometries=geojson&steps=true`;
-  return parseOsrm(await getJson<OsrmResponse>(url, undefined, 12_000));
+  if (navigator.onLine) {
+    const path = points.map((p) => `${p.lng},${p.lat}`).join(';');
+    const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${path}?overview=full&geometries=geojson&steps=true`;
+    const online = parseOsrm(await getJson<OsrmResponse>(url, undefined, 7000));
+    if (online) return online;
+  }
+  // sin red (o el servicio no responde): calles guardadas en el móvil
+  const off = await offlineRoute(points).catch(() => null);
+  return off ? { ...off, offline: true } : null;
 }
 
 export const footRoute = (from: LatLng, to: LatLng): Promise<Route | null> => footRouteVia([from, to]);
@@ -72,17 +79,21 @@ export function parsePhoton(r: PhotonResponse | null): Found[] {
 export async function searchPlaces(q: string): Promise<Found[] | null> {
   const query = q.trim();
   if (query.length < 3) return [];
+  const offline = async () => searchOffline(query).catch(() => null);
+  if (!navigator.onLine) return offline();
   const b = ROME_BBOX;
   const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lat=${ROME_CENTER.lat}&lon=${ROME_CENTER.lng}&bbox=${b.west - 0.15},${b.south - 0.1},${b.east + 0.15},${b.north + 0.1}`;
-  const r = await getJson<PhotonResponse>(url);
-  return r ? parsePhoton(r) : null;
+  const r = await getJson<PhotonResponse>(url, undefined, 6000);
+  return r ? parsePhoton(r) : offline();
 }
 
 /** Qué hay en un punto del mapa (pulsación larga). */
 export async function reverseGeocode(p: LatLng): Promise<Found | null> {
-  const r = await getJson<PhotonResponse>(`https://photon.komoot.io/api/reverse?lat=${p.lat}&lon=${p.lng}&limit=1`);
+  const offline = async () => reverseOffline(p).catch(() => null);
+  if (!navigator.onLine) return offline();
+  const r = await getJson<PhotonResponse>(`https://photon.komoot.io/api/reverse?lat=${p.lat}&lon=${p.lng}&limit=1`, undefined, 6000);
   const f = r ? parsePhoton(r)[0] : undefined;
-  return f ? { ...f, lat: p.lat, lng: p.lng } : null;
+  return f ? { ...f, lat: p.lat, lng: p.lng } : offline();
 }
 
 // ── Puntos de interés (Overpass) ────────────────────────────────

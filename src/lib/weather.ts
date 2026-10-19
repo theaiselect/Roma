@@ -3,7 +3,7 @@ import { ROME } from '@/lib/sun';
 
 // Tiempo (F07): Open-Meteo, gratis y sin clave. Se guarda la última previsión para verla sin conexión.
 export interface DayForecast { date: string; code: number; tmax: number; tmin: number; rainProb: number | null }
-export interface Forecast { fetchedAt: number; days: DayForecast[] }
+export interface Forecast { fetchedAt: number; days: DayForecast[]; normals?: boolean }
 
 const KEY = 'roma-weather';
 const URL_ = `https://api.open-meteo.com/v1/forecast?latitude=${ROME.lat}&longitude=${ROME.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FRome&forecast_days=16`;
@@ -41,6 +41,22 @@ export function isRainy(code: number, prob: number | null): boolean {
 function cached(): Forecast | null {
   try { return JSON.parse(localStorage.getItem(KEY) ?? 'null') as Forecast | null; } catch { return null; }
 }
+export const forecastCached = cached;
+
+/** Descarga la previsión y la guarda. null si no hay red. */
+export async function refreshForecast(): Promise<Forecast | null> {
+  try {
+    const r = await fetch(URL_);
+    const parsed = r.ok ? parseForecast(await r.json()) : null;
+    if (parsed) { try { localStorage.setItem(KEY, JSON.stringify(parsed)); } catch { /* ignore */ } }
+    return parsed;
+  } catch { return null; }
+}
+
+/** Sin previsión guardada ni red: lo típico de Roma a finales de octubre y principios de noviembre. */
+export function climateNormals(dates: string[], now = Date.now()): Forecast {
+  return { fetchedAt: now, normals: true, days: dates.map((date) => ({ date, code: 3, tmax: 19, tmin: 10, rainProb: 40 })) };
+}
 
 export function useForecast(): Forecast | null {
   const [f, setF] = useState<Forecast | null>(cached);
@@ -48,10 +64,7 @@ export function useForecast(): Forecast | null {
     const c = cached();
     if (c && Date.now() - c.fetchedAt < 3 * 3600_000) return;
     if (!navigator.onLine) return;
-    fetch(URL_).then((r) => (r.ok ? r.json() : null)).then((j) => {
-      const parsed = parseForecast(j);
-      if (parsed) { setF(parsed); try { localStorage.setItem(KEY, JSON.stringify(parsed)); } catch { /* ignore */ } }
-    }).catch(() => undefined);
+    void refreshForecast().then((p) => { if (p) setF(p); });
   }, []);
   return f;
 }

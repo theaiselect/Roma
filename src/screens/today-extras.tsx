@@ -12,12 +12,12 @@ import { rainDays, setShared, useSharedState, useTimeline } from '@/lib/plan-sta
 import { useSettings } from '@/lib/settings';
 import { sunsetAt } from '@/lib/sun';
 import { romeParts } from '@/lib/time';
-import { ageText, isRainy, useForecast, weatherText } from '@/lib/weather';
+import { ageText, climateNormals, isRainy, useForecast, weatherText } from '@/lib/weather';
 import { DailyQuestionCard } from '@/screens/us-daily';
 
 function WeatherCard({ date }: { date: string }) {
   const f = useForecast();
-  const day = f?.days.find((d) => d.date === date);
+  const day = f?.days.find((d) => d.date === date) ?? (f ? undefined : climateNormals([date]).days[0]);
   const sunset = romeParts(sunsetAt(date)).time;
   return (
     <section class="card stack" style={{ gap: '0.35rem' }} aria-label="Tiempo y atardecer">
@@ -30,7 +30,7 @@ function WeatherCard({ date }: { date: string }) {
         </div>
       </div>
       <p class="small"><Icon name="sun" size={16} /> Atardecer a las <b class="num">{sunset}</b></p>
-      {f && <p class="small muted">Previsión de Open-Meteo, {ageText(f.fetchedAt)}.</p>}
+      {f ? <p class="small muted">Previsión de Open-Meteo, {ageText(f.fetchedAt)}.</p> : <p class="small muted">Sin previsión guardada: es lo típico de Roma en estas fechas.</p>}
     </section>
   );
 }

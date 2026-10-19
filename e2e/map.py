@@ -23,6 +23,14 @@ def osrm(n_legs=1):
 OVERPASS={'elements':[{'type':'node','id':11,'lat':41.9012,'lon':12.4831,'tags':{'amenity':'drinking_water'}},
                       {'type':'node','id':12,'lat':41.9040,'lon':12.4850,'tags':{'amenity':'toilets','fee':'no'}},
                       {'type':'node','id':13,'lat':41.9055,'lon':12.4860,'tags':{'amenity':'pharmacy','name':'Farmacia Test'}}]}
+def _ways():
+    out=[]
+    for i in range(45):
+        out.append({'type':'way','tags':{'highway':'residential','name':f'Via Est {i}'},'geometry':[{'lat':41.900+i*0.0004,'lon':12.480+j*0.0004} for j in range(45)]})
+        out.append({'type':'way','tags':{'highway':'footway','name':f'Via Norte {i}'},'geometry':[{'lat':41.900+j*0.0004,'lon':12.480+i*0.0004} for j in range(45)]})
+    return {'elements':out}
+WAYS=_ways()
+PLACES={'elements':[{'type':'node','lat':41.9+k*0.0003,'lon':12.49,'tags':{'name':f'Trattoria {k}','amenity':'restaurant'}} for k in range(60)]+[{'type':'node','lat':41.9060,'lon':12.4880,'tags':{'name':'Caffè Prova','amenity':'cafe'}},{'type':'node','lat':41.9010,'lon':12.4850,'tags':{'name':'Pantheon','historic':'monument'}}]}
 counts={'tiles':0}
 def mock(route):
     u=route.request.url
@@ -34,17 +42,22 @@ def mock(route):
         return route.fulfill(status=200,headers={'access-control-allow-origin':'*'},content_type='application/x-protobuf',body=b'')
     if 'photon.komoot.io' in u: return j(PHOTON)
     if 'routing.openstreetmap.de' in u: return j(osrm(u.split('/foot/')[1].split('?')[0].count(';')))
-    if 'overpass-api.de' in u: return j(OVERPASS)
+    if 'open-meteo.com' in u: return j({'daily':{'time':['2026-10-31'],'weather_code':[1],'temperature_2m_max':[20],'temperature_2m_min':[11],'precipitation_probability_max':[10]}})
+    if 'overpass-api.de' in u:
+        from urllib.parse import unquote_plus; q=unquote_plus(route.request.post_data or '')
+        if 'out tags geom' in q: return j(WAYS)
+        if 'nwr["name"]' in q: return j(PLACES)
+        return j(OVERPASS)
     return route.continue_()
 
 with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/opt/pw-browsers/chromium',args=['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     ctx=b.new_context(viewport={'width':412,'height':900},is_mobile=True,has_touch=True,locale='es-ES',timezone_id='Europe/Madrid',service_workers='block',
                       permissions=['geolocation'],geolocation={'latitude':41.9060,'longitude':12.4823})
-    for host in ['tiles.openfreemap.org','photon.komoot.io','routing.openstreetmap.de','overpass-api.de']:
+    for host in ['tiles.openfreemap.org','photon.komoot.io','routing.openstreetmap.de','overpass-api.de','api.open-meteo.com']:
         ctx.route(f'**://{host}/**',mock)
     pg=ctx.new_page(); errs=[]
-    pg.on('pageerror',lambda e:errs.append(str(e)))
+    pg.on('pageerror',lambda e:errs.append(str(e))); pg.on('console',lambda m:print('CONSOLE',m.text[:300]) if 'offline' in m.text else None)
     pg.goto(f'{BASE}/?now={NOW}')
     pg.get_by_role('button',name='Jesús').click(); pg.get_by_placeholder(re.compile('aaaa')).fill('testtest')
     pg.get_by_role('button',name='Continuar').click(); pg.get_by_role('button',name='Ya está, seguir').click(); pg.get_by_role('button',name='Entrar igualmente').click()
@@ -98,10 +111,30 @@ with sync_playwright() as p:
     pg.get_by_role('button',name='Farmacia').click(); pg.wait_for_timeout(400)
     check('cerca de mí: farmacia de OSM', pg.get_by_text('Farmacia Test').count()>0)
     # descarga sin conexión
-    pg.get_by_role('button',name='Descargar Roma').click()
-    pg.wait_for_selector('text=Descargado',timeout=90000)
+    pg.get_by_role('button',name='Preparar para ir sin conexión').click()
+    try: pg.wait_for_selector('text=Todo listo',timeout=120000)
+    except Exception:
+        print(pg.locator('section[aria-label="Preparar para ir sin conexión"]').inner_text()); print(errs[:3]); raise
     cnt=pg.evaluate("caches.open('mapa').then(c=>c.keys()).then(k=>k.length)")
     check(f'descarga: teselas y estilo en la caché «mapa» ({cnt})', cnt>=150)
+    # SIN CONEXIÓN: se corta la red y todo sigue funcionando con lo descargado
+    ctx.set_offline(True); pg.evaluate("window.dispatchEvent(new Event('offline'))"); pg.wait_for_timeout(300)
+    pg.get_by_role('button',name='Quitar ruta').first.click() if pg.get_by_role('button',name='Quitar ruta').count() else None
+    pg.get_by_label('Buscar un sitio').fill('Caffe Prova'); pg.wait_for_timeout(900)
+    check('sin conexión: el buscador encuentra un sitio fuera del plan', pg.get_by_role('option',name=re.compile('Caffè Prova')).count()>0)
+    pg.get_by_label('Buscar un sitio').fill('Via Norte 7'); pg.wait_for_timeout(900)
+    check('sin conexión: el buscador encuentra una calle', pg.get_by_role('option',name=re.compile('Via Norte 7')).count()>0)
+    pg.get_by_role('option',name=re.compile('Via Norte 7')).first.click(); pg.wait_for_timeout(500)
+    pg.get_by_role('button',name='Dónde estoy').first.click(); pg.wait_for_timeout(800)
+    pg.get_by_role('button',name='Ruta a pie',exact=True).click(); pg.wait_for_timeout(1500)
+    check('sin conexión: calcula la ruta a pie con las calles guardadas', pg.get_by_text('sin conexión').count()>0 and pg.evaluate("window.__romaMap.querySourceFeatures('route').length")>0)
+    pg.screenshot(path='/tmp/map-offline.png')
+    pg.get_by_role('button',name='Quitar ruta').first.click(); pg.wait_for_timeout(300)
+    ctx.set_geolocation({'latitude':41.9120,'longitude':12.4900})
+    pg.evaluate("(()=>{const m=window.__romaMap;m.jumpTo({center:[12.4906,41.9064],zoom:17})})()"); pg.wait_for_timeout(800)
+    box=pg.locator('.romamap').bounding_box()
+    pg.mouse.click(box['x']+box['width']/2,box['y']+box['height']/2,button='right'); pg.wait_for_timeout(1200)
+    check('sin conexión: pulsación larga dice qué calle es', pg.get_by_text(re.compile('Via (Est|Norte) \\d+')).count()>0)
     check('descarga: sin errores de página', not errs)
     if errs: print(errs[:3])
     b.close()
