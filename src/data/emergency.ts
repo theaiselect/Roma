@@ -15,7 +15,7 @@ export const emergencyContacts: EmergencyContact[] = [
   { id: '112', label: 'Emergencias (policía, ambulancia, bomberos)', phone: '112', note: 'Número único europeo. Gratis, también sin saldo.', source: 'https://www.regione.lazio.it/notizie/Inaugurata-nuova-sala-numero-unico-emergenza-112' },
   { id: 'consulado-emergencia', label: 'Consulado de España · emergencia consular', phone: '+39 335 333 438', note: 'Solo emergencias reales (detención, accidente grave, pérdida de documentación urgente).', source: 'https://exteriores.gob.es/Consulados/roma/es/Consulado/Paginas/Horario,-Localizacion-y-Contacto.aspx' },
   { id: 'consulado', label: 'Consulado de España · centralita', phone: '+39 06 6871401', note: 'Via Campo Marzio 34. Lunes a viernes, 9:00–13:00, con cita previa.', source: 'https://exteriores.gob.es/Consulados/roma/es/Consulado/Paginas/Horario,-Localizacion-y-Contacto.aspx' },
-  { id: 'hotel', label: 'Hotel Soha Piazza di Spagna', pending: 'Teléfono: verificar en la confirmación de la reserva', note: 'Via Zucchelli 32. Recepción 08:00–16:00 (verificar).' },
+  { id: 'hotel', label: 'Hotel Soha Piazza di Spagna', phone: '+39 351 247 3415', note: 'Via Zucchelli 32. Reserva Booking.com 5044007987, PIN 5702. Recepción 08:00–16:00.' },
 ];
 
 export const consulateEmail = 'cog.roma@maec.es';
