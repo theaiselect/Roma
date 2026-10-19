@@ -1,4 +1,8 @@
+import { Icon } from '@/components/Icon';
 import { euros } from '@/components/StopCard';
+import { hotel } from '@/data/trip';
+import { placeById } from '@/data/places';
+import { directionsUrl, transitUrl } from '@/lib/maps';
 import { transport } from '@/data/transport';
 import { BackTitle } from '@/screens/More';
 
@@ -7,6 +11,14 @@ export function Transport() {
   return (
     <div class="stack-lg">
       <BackTitle title="Transporte" />
+      <section class="card stack">
+        <h2>Volver al hotel</h2>
+        <p class="small">{hotel.name}, {hotel.address}. Se abre en el mapa del móvil con tu ubicación como salida.</p>
+        <div class="row">
+          <a class="btn primary" href={transitUrl({ ...placeById.get(hotel.placeId)!, name: `${hotel.name}, ${hotel.address}` })} target="_blank" rel="noopener"><Icon name="train" /> En metro o bus</a>
+          <a class="btn" href={directionsUrl({ ...placeById.get(hotel.placeId)!, name: `${hotel.name}, ${hotel.address}` })} target="_blank" rel="noopener"><Icon name="walk" /> A pie</a>
+        </div>
+      </section>
       <section class="card stack">
         <h2>Metro</h2>
         <table class="simple">

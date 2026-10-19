@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { BlobImage } from '@/components/BlobImage';
 import { Icon } from '@/components/Icon';
+import { Progress } from '@/components/Progress';
 import { euros } from '@/components/StopCard';
 import { budget, days, travellers } from '@/data/trip';
 import type { DayNum, Who } from '@/data/types';
@@ -13,6 +14,8 @@ import { useSettings } from '@/lib/settings';
 import { romeParts } from '@/lib/time';
 
 export type ExpenseEntity = Entity & ExpenseLike & { kind: 'expense'; note: string; photoBlobId?: string };
+
+const LIVE = (e: ExpenseEntity) => !e.deleted && !e.settle;
 
 const WHO: Who[] = ['jesus', 'lucia'];
 const LIGHT_CLS = { green: 'ok', ocre: 'warn', vino: 'bad' } as const;
@@ -102,6 +105,18 @@ export function Expenses() {
   const plan = plannedFoodByDay();
   const spent = foodSpentByDay(list, me);
   const totalFood = Object.values(spent).reduce((a, c) => a + c, 0);
+  const byCat = CATEGORIES.map(([k, l]) => [l, list.filter((e) => LIVE(e) && e.category === k).reduce((a, e) => a + e.amountCents, 0)] as [string, number]).sort((x, y) => y[1] - x[1]);
+  const [copied, setCopied] = useState(false);
+  const other: Who = b.debtor === 'jesus' ? 'lucia' : 'jesus';
+  const settle = async () => {
+    if (!b.debtor || !confirm(`¿${travellers[b.debtor].name} ya ha pagado ${euros(b.amountCents)} a ${travellers[other].name}?`)) return;
+    await save({ kind: 'expense', amountCents: b.amountCents, paidBy: b.debtor, split: { jesus: 0, lucia: 0, [other]: b.amountCents } as Record<Who, number>, category: 'otros', day: null, note: 'Saldado entre los dos', settle: true });
+  };
+  const copyDebt = async () => {
+    if (!b.debtor) return;
+    const text = `Bizum de ${euros(b.amountCents)} por el viaje a Roma`;
+    try { await navigator.clipboard.writeText(text); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { prompt('Copia el texto:', text); }
+  };
 
   return (
     <div class="stack-lg">
@@ -112,7 +127,25 @@ export function Expenses() {
           ? <h2 class="num">{travellers[b.debtor].name} debe {euros(b.amountCents)} a {travellers[b.debtor === 'jesus' ? 'lucia' : 'jesus'].name}</h2>
           : <h2>Estáis en paz</h2>}
         <p class="small muted num">Total gastado: {euros(b.totalCents)} · Pagado por Jesús {euros(b.paid.jesus)} · por Lucía {euros(b.paid.lucia)}</p>
+        {b.debtor && (
+          <div class="row">
+            <button type="button" class="btn primary" onClick={() => void settle()}>Marcar como saldado</button>
+            <button type="button" class="btn" onClick={() => void copyDebt()}>{copied ? 'Copiado' : 'Copiar para Bizum'}</button>
+          </div>
+        )}
       </section>
+
+      {byCat.some(([, c]) => c > 0) && (
+        <section class="card stack" style={{ gap: '0.5rem' }}>
+          <h2>En qué os lo gastáis</h2>
+          {byCat.filter(([, c]) => c > 0).map(([label, c]) => (
+            <div key={label} class="stack" style={{ gap: '0.2rem' }}>
+              <div class="spread small"><span>{label}</span><span class="num">{euros(c)} · {Math.round((c / (b.totalCents || 1)) * 100)} %</span></div>
+              <Progress value={c} max={b.totalCents || 1} label={label} />
+            </div>
+          ))}
+        </section>
+      )}
 
       <section class="card stack">
         <div class="spread"><h2>Comida: tu parte</h2><span class={`chip ${LIGHT_CLS[light(totalFood, budget.foodCapPPCents)]}`}>{euros(totalFood)} / {euros(budget.foodCapPPCents)}</span></div>
@@ -141,7 +174,7 @@ export function Expenses() {
         {list.map((e) => (
           <article key={e.id} class="card stack" style={{ gap: '0.35rem' }}>
             <button type="button" class="spread" style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', textAlign: 'left', minHeight: 'var(--tap)' }} onClick={() => setOpen(open === e.id ? null : e.id)}>
-              <span><b class="num">{euros(e.amountCents)}</b> · {e.note || CATEGORIES.find(([k]) => k === e.category)?.[1]}</span>
+              <span><b class="num">{euros(e.amountCents)}</b> · {e.settle ? '🤝 ' : ''}{e.note || CATEGORIES.find(([k]) => k === e.category)?.[1]}</span>
               <span class="small muted">{e.day ? days.find((d) => d.day === e.day)?.roman : 'Antes'} · pagó {travellers[e.paidBy].name}</span>
             </button>
             {open === e.id && (

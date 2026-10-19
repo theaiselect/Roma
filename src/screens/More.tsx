@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks';
 import { Icon, type IconName } from '@/components/Icon';
 
 export function BackTitle({ title, back = '/mas' }: { title: string; back?: string }) {
@@ -27,11 +28,16 @@ export const moreItems: { href: string; label: string; icon: IconName }[] = [
 ];
 
 export function More() {
+  const [q, setQ] = useState('');
+  const n = q.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const items = moreItems.filter((i) => !n || i.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(n));
   return (
     <div class="stack-lg">
       <div class="page-title"><h1>Más</h1></div>
+      <input type="search" placeholder="Buscar una herramienta" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Buscar una herramienta" />
+      {items.length === 0 && <p class="muted">Nada con «{q}». Prueba con «gastos», «frases» o «reservas».</p>}
       <nav class="card menu" style={{ padding: 0 }} aria-label="Herramientas">
-        {moreItems.map((i) => (
+        {items.map((i) => (
           <a key={i.href} href={i.href}>
             <Icon name={i.icon} />
             <span>{i.label}</span>

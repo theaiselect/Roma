@@ -14,6 +14,8 @@ export interface ExpenseLike {
   category: Category;
   day: DayNum | null;
   deleted?: boolean;
+  /** Pago para saldar la deuda entre los dos: mueve el saldo, pero no cuenta como gasto del viaje. */
+  settle?: boolean;
 }
 
 const OTHER: Record<Who, Who> = { jesus: 'lucia', lucia: 'jesus' };
@@ -50,13 +52,15 @@ export interface Balance {
 export function balance(expenses: ExpenseLike[]): Balance {
   const paid = { jesus: 0, lucia: 0 };
   const share = { jesus: 0, lucia: 0 };
+  let settled = 0; // >0: Jesús ha pagado a Lucía para saldar
   for (const e of expenses) {
     if (e.deleted) continue;
+    if (e.settle) { settled += e.paidBy === 'jesus' ? e.amountCents : -e.amountCents; continue; }
     paid[e.paidBy] += e.amountCents;
     share.jesus += e.split.jesus;
     share.lucia += e.split.lucia;
   }
-  const netJesus = paid.jesus - share.jesus; // >0: a Jesús le deben
+  const netJesus = paid.jesus - share.jesus + settled; // >0: a Jesús le deben
   return {
     paid, share,
     debtor: netJesus > 0 ? 'lucia' : netJesus < 0 ? 'jesus' : null,

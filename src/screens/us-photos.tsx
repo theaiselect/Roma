@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { BlobImage } from '@/components/BlobImage';
 import { Icon } from '@/components/Icon';
+import { Progress } from '@/components/Progress';
 import { challenges } from '@/data/challenges';
 import { travellers } from '@/data/trip';
 import { appNow } from '@/lib/clock';
@@ -32,6 +33,7 @@ export function Photos() {
   const photos = (useKind<PhotoEntity>('photo') ?? []).sort((a, b) => b.takenAt - a.takenAt);
   const [busy, setBusy] = useState<string | null>(null);
   const [heart, setHeart] = useState<string | null>(null);
+  const [surprise, setSurprise] = useState<string | null>(null);
   const done = new Set(photos.map((p) => p.challengeId).filter(Boolean));
   const run = (id: string | undefined, f: File, caption = '') => {
     setBusy(id ?? 'free');
@@ -41,16 +43,24 @@ export function Photos() {
   return (
     <section class="stack-lg">
       <section class="stack">
-        <div class="spread"><h2>Retos</h2><span class="chip">{done.size} de {challenges.length}</span></div>
+        <div class="spread"><h2>Retos</h2><span class="chip num">{done.size} de {challenges.length}</span></div>
+        <Progress value={done.size} max={challenges.length} label="Retos completados" />
+        {done.size < challenges.length && (
+          <button type="button" class="btn" onClick={() => {
+            const left = challenges.filter((c) => !done.has(c.id));
+            const pick = left[Math.floor(Math.random() * left.length)]!;
+            setSurprise(pick.id);
+            window.setTimeout(() => document.getElementById(`reto-${pick.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+          }}><Icon name="star" /> Reto sorpresa</button>
+        )}
         <ul class="list">
-          {challenges.map((c) => (
-            <li key={c.id} class="card stack" style={{ gap: '0.4rem' }}>
-              <div class="spread">
-                <span class={done.has(c.id) ? 'strike' : undefined}>{c.text}</span>
-                {heart === c.id && <span class="pop-heart" aria-hidden="true">♥</span>}
-                {done.has(c.id) && <span class="chip ok">Hecho</span>}
-              </div>
-              {!done.has(c.id) && <PhotoInput label={busy === c.id ? 'Guardando…' : 'Completar con foto'} onFile={(f) => run(c.id, f, c.text)} />}
+          {[...challenges].sort((x, y) => Number(done.has(x.id)) - Number(done.has(y.id))).map((c) => (
+            <li key={c.id} id={`reto-${c.id}`} class={`card reto${surprise === c.id ? ' surprise' : ''}`}>
+              <span class={done.has(c.id) ? 'strike' : undefined}>{c.text}</span>
+              {heart === c.id && <span class="pop-heart" aria-hidden="true">♥</span>}
+              {done.has(c.id)
+                ? <span class="chip ok">Hecho</span>
+                : <PhotoInput label={busy === c.id ? 'Guardando…' : 'Foto'} onFile={(f) => run(c.id, f, c.text)} />}
             </li>
           ))}
         </ul>

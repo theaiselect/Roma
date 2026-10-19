@@ -1,5 +1,6 @@
 import { useRef, useState } from 'preact/hooks';
 import { Icon } from '@/components/Icon';
+import { ShareLocation } from '@/components/ShareLocation';
 import { hotel } from '@/data/trip';
 import { placeById } from '@/data/places';
 import { directionsUrl } from '@/lib/maps';
@@ -56,6 +57,7 @@ export function LostSheet({ onClose }: { onClose: () => void }) {
           {hotel.phone
             ? <a class="btn block" href={telHref(hotel.phone)}><Icon name="phone" /> Llamar al hotel</a>
             : <p class="pending small">⚠️ Pendiente de confirmar: teléfono del hotel (en la confirmación de la reserva).</p>}
+          <ShareLocation label="Enviar mi ubicación a Lucía" />
           <a class="btn block" href="tel:112"><Icon name="sos" /> Emergencias · 112</a>
           <a class="btn ghost block" href="/mas/emergencias" onClick={onClose}>Más teléfonos y qué hacer</a>
         </div>

@@ -1,6 +1,7 @@
 import { useRoute } from 'preact-iso';
 import { useState } from 'preact/hooks';
 import { Icon } from '@/components/Icon';
+import { Progress } from '@/components/Progress';
 import { dishes, menuWords } from '@/data/dishes';
 import { monuments } from '@/data/monuments';
 import { packing, nightBefore } from '@/data/packing';
@@ -34,15 +35,26 @@ function Monuments() {
   const [justMarked, setJustMarked] = useState<string | null>(null);
   const planned = monuments.filter((m) => m.flag === 'see' || m.flag === 'pass');
   const seen = monuments.filter((m) => checks.get(m.id)?.done).length;
+  const plannedSeen = planned.filter((m) => checks.get(m.id)?.done).length;
+  const [onlyPending, setOnlyPending] = useState(false);
   return (
     <div class="stack-lg">
       <BackTitle title="Monumentos" />
-      <section class="card"><p class="countdown num" style={{ fontSize: '2.2rem' }}>{seen} de {planned.length} vistos</p><p class="small muted">Contando los que están en el plan (✅ y 👀). Puedes marcar cualquiera.</p></section>
-      {[1, 2, 3, 4, 5].map((tier) => (
+      <section class="card stack" style={{ gap: '0.5rem' }}>
+        <p class="countdown num" style={{ fontSize: '2.2rem' }}>{plannedSeen} de {planned.length} vistos</p>
+        <Progress value={plannedSeen} max={planned.length} label="Monumentos del plan vistos" />
+        <p class="small muted">Contando los que están en el plan (✅ y 👀). {seen > plannedSeen ? `Y ${seen - plannedSeen} más fuera del plan. ` : ''}Puedes marcar cualquiera.</p>
+        <label class="row small" style={{ gap: '0.5rem' }}><input type="checkbox" checked={onlyPending} onChange={(e) => setOnlyPending((e.target as HTMLInputElement).checked)} /> Solo los que faltan</label>
+      </section>
+      {[1, 2, 3, 4, 5].map((tier) => {
+        const inTier = monuments.filter((m) => m.tier === tier);
+        const shown = onlyPending ? inTier.filter((m) => !checks.get(m.id)?.done) : inTier;
+        if (!shown.length) return null;
+        return (
         <section key={tier} class="stack">
-          <h2>{tier} · {TIER[tier]}</h2>
+          <div class="spread"><h2>{tier} · {TIER[tier]}</h2><span class="chip num">{inTier.filter((m) => checks.get(m.id)?.done).length}/{inTier.length}</span></div>
           <ul class="card list" style={{ padding: '0.5rem 1rem' }}>
-            {monuments.filter((m) => m.tier === tier).map((m) => {
+            {shown.map((m) => {
               const on = checks.get(m.id)?.done ?? false;
               return (
                 <li key={m.id} class="leg" style={{ alignItems: 'center' }}>
@@ -60,21 +72,24 @@ function Monuments() {
             })}
           </ul>
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-/** Frases en italiano con voz (F30). */
+/** Frases en italiano con voz (F30) y modo «Enseñar»: la frase en letra enorme para mostrársela a alguien. */
 function Phrases() {
   const [noVoice, setNoVoice] = useState(false);
   const [q, setQ] = useState('');
+  const [show, setShow] = useState<{ es: string; it: string } | null>(null);
   const ql = q.trim().toLowerCase();
   return (
     <div class="stack-lg">
       <BackTitle title="Frases en italiano" />
       {noVoice && <div class="alert"><Icon name="alert" /><span>Este móvil no tiene voz italiana instalada. {voiceHelp(isIOS())}</span></div>}
-      <input type="text" placeholder="Buscar…" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Buscar frase" />
+      <input type="search" placeholder="Buscar en español o en italiano" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Buscar frase" />
+      <p class="small muted">Toca una frase para oírla. «Enseñar» la pone en letra grande para que la lea quien tengas delante.</p>
       {phraseGroups.map((g) => {
         const items = g.items.filter((p) => !ql || p.es.toLowerCase().includes(ql) || p.it.toLowerCase().includes(ql));
         if (!items.length) return null;
@@ -82,12 +97,57 @@ function Phrases() {
           <section key={g.id} class="stack">
             <h2>{g.title}</h2>
             {items.map((p) => (
-              <button type="button" key={p.it} class="card" style={{ textAlign: 'left', border: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', display: 'grid', gap: '0.2rem' }}
-                onClick={() => void speakItalian(p.it).then((ok) => setNoVoice(!ok))}>
-                <span class="small muted">{p.es}</span>
-                <span lang="it" style={{ fontSize: '1.2rem', fontWeight: 600 }}><Icon name="speaker" size={18} /> {p.it}</span>
-                <span class="small" style={{ color: 'var(--terracotta)' }}>{p.say}</span>
-              </button>
+              <article key={p.it} class="card phrase">
+                <button type="button" class="phrase-main" onClick={() => void speakItalian(p.it).then((ok) => setNoVoice(!ok))}>
+                  <span class="small muted">{p.es}</span>
+                  <span lang="it" class="phrase-it"><Icon name="speaker" size={18} /> {p.it}</span>
+                  <span class="small" style={{ color: 'var(--terracotta)' }}>{p.say}</span>
+                </button>
+                <button type="button" class="btn" onClick={() => setShow({ es: p.es, it: p.it })}>Enseñar</button>
+              </article>
+            ))}
+          </section>
+        );
+      })}
+      {show && (
+        <div class="showcard" role="dialog" aria-modal="true" aria-label="Frase en letra grande" onClick={() => setShow(null)}>
+          <p lang="it">{show.it}</p>
+          <p class="small">{show.es}</p>
+          <button type="button" class="btn" onClick={() => setShow(null)}>Cerrar</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Chuleta de la carta romana (F14). */
+function Menu() {
+  const [q, setQ] = useState('');
+  const ql = q.trim().toLowerCase();
+  const groups = [...new Set(dishes.map((d) => d.group))];
+  return (
+    <div class="stack-lg">
+      <BackTitle title="La carta romana" />
+      <input type="search" placeholder="Buscar un plato" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Buscar un plato" />
+      {!ql && (
+        <section class="card stack" style={{ gap: '0.3rem' }}>
+          {menuWords.map(([it, es]) => <p key={it} class="small"><b lang="it">{it}</b>: {es}</p>)}
+        </section>
+      )}
+      {groups.map((g) => {
+        const items = dishes.filter((d) => d.group === g && (!ql || d.it.toLowerCase().includes(ql) || d.es.toLowerCase().includes(ql)));
+        if (!items.length) return null;
+        return (
+          <section key={g} class="stack">
+            <h2>{g}</h2>
+            {items.map((d) => (
+              <article key={d.it} class="card dish">
+                <div>
+                  <h3 lang="it">{d.it}</h3>
+                  <p class="small">{d.es}</p>
+                </div>
+                <button type="button" class="btn ghost" aria-label={`Escuchar ${d.it}`} onClick={() => void speakItalian(d.it)}><Icon name="speaker" size={20} /></button>
+              </article>
             ))}
           </section>
         );
@@ -96,38 +156,22 @@ function Phrases() {
   );
 }
 
-/** Chuleta de la carta romana (F14). */
-function Menu() {
-  const groups = [...new Set(dishes.map((d) => d.group))];
-  return (
-    <div class="stack-lg">
-      <BackTitle title="La carta romana" />
-      <section class="card stack" style={{ gap: '0.3rem' }}>
-        {menuWords.map(([it, es]) => <p key={it} class="small"><b lang="it">{it}</b>: {es}</p>)}
-      </section>
-      {groups.map((g) => (
-        <section key={g} class="stack">
-          <h2>{g}</h2>
-          {dishes.filter((d) => d.group === g).map((d) => (
-            <article key={d.it} class="card" style={{ display: 'grid', gap: '0.2rem' }}>
-              <button type="button" class="btn ghost" style={{ justifyContent: 'flex-start', padding: 0, minHeight: 0 }} onClick={() => void speakItalian(d.it)}>
-                <h3 lang="it">{d.it}</h3> <Icon name="speaker" size={16} />
-              </button>
-              <p class="small">{d.es}</p>
-            </article>
-          ))}
-        </section>
-      ))}
-    </div>
-  );
-}
-
 function PersonChecklist({ list, items, prefix = '' }: { list: 'packing' | 'nightBefore'; items: { id: string; text: string; note?: string }[]; prefix?: string }) {
   const checks = useChecks(list);
   const who: Who[] = ['jesus', 'lucia'];
+  const done = (w: Who) => items.filter((i) => checks.get(`${prefix}${i.id}:${w}`)?.done).length;
   return (
-    <table class="simple">
-      <thead><tr><th>Cosa</th>{who.map((w) => <th key={w} style={{ textAlign: 'center' }}>{travellers[w].name}</th>)}</tr></thead>
+    <>
+    <div class="grid2">
+      {who.map((w) => (
+        <div key={w} class="stack" style={{ gap: '0.25rem' }}>
+          <span class="small"><b>{travellers[w].name}</b> <span class="num muted">{done(w)}/{items.length}</span></span>
+          <Progress value={done(w)} max={items.length} label={`Lista de ${travellers[w].name}`} />
+        </div>
+      ))}
+    </div>
+    <table class="simple checklist">
+      <thead><tr><th>Cosa</th>{who.map((w) => <th key={w} class="who">{travellers[w].name}</th>)}</tr></thead>
       <tbody>
         {items.map((i) => (
           <tr key={i.id}>
@@ -143,6 +187,7 @@ function PersonChecklist({ list, items, prefix = '' }: { list: 'packing' | 'nigh
         ))}
       </tbody>
     </table>
+    </>
   );
 }
 

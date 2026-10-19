@@ -163,7 +163,7 @@ details.planb ul { margin: 0.25rem 0 0; padding-left: 1.1rem; display: grid; gap
 
 /* ── Formularios ────────────────────────────────────────────── */
 label.field { display: grid; gap: 0.3rem; font-weight: 600; }
-input[type='text'], input[type='password'], input[type='number'], textarea, select {
+input[type='text'], input[type='search'], input[type='password'], input[type='number'], textarea, select {
   font: inherit; min-height: var(--tap); padding: 0.5rem 0.75rem; border-radius: 12px;
   border: 1px solid var(--linea); background: var(--tarjeta); color: var(--tinta); width: 100%;
 }
@@ -238,3 +238,22 @@ table.simple td, table.simple th { text-align: left; padding: 0.35rem 0; border-
 .legs li { display: grid; gap: 0.1rem; }
 details summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
 .mapwrap.navmode .romamap { height: min(74vh, 640px); }
+
+/* ── Mejoras de las herramientas ───────────────────────────── */
+.progress { height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--tinta) 10%, transparent); overflow: hidden; }
+.progress i { display: block; height: 100%; border-radius: inherit; background: var(--pino); transition: width 300ms ease; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+table.checklist th.who, table.checklist td:not(:first-child) { text-align: center; width: 4.6rem; padding-left: 0.25rem; padding-right: 0.25rem; }
+table.checklist td:first-child { padding-right: 0.75rem; }
+.phrase { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: center; }
+.phrase-main { display: grid; gap: 0.2rem; text-align: left; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; min-height: var(--tap); }
+.phrase-it { font-size: 1.2rem; font-weight: 600; }
+.showcard { position: fixed; inset: 0; z-index: 60; display: grid; place-content: center; gap: 1.25rem; padding: 1.5rem; text-align: center; background: var(--marmol); }
+.showcard p[lang] { font-family: var(--font-serif); font-size: clamp(2.4rem, 11vw, 4.4rem); line-height: 1.1; font-weight: 600; }
+.dish { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: center; }
+.reto { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding-top: 0.6rem; padding-bottom: 0.6rem; }
+.reto.surprise { outline: 3px solid var(--ocra); }
+.reto .btn { min-height: 40px; flex: none; }
+.scroll-row { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); padding-right: 1.5rem; }
+input[type='search'] { -webkit-appearance: none; appearance: none; }
+input[type='search']::-webkit-search-cancel-button { -webkit-appearance: none; }

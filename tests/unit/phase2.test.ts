@@ -171,3 +171,13 @@ describe('navegación a pie (nav.ts)', async () => {
     expect(Math.round(bearing({ lat: 41.9, lng: 12.5 }, { lat: 42, lng: 12.5 }))).toBe(0);
   });
 });
+
+describe('saldar la deuda (money.ts)', async () => {
+  const { balance, equalSplit } = await import('@/lib/money');
+  it('un pago de saldado deja el saldo a cero y no cuenta como gasto', () => {
+    const gasto = { amountCents: 5000, paidBy: 'jesus' as const, split: equalSplit(5000, 'jesus'), category: 'comida' as const, day: 1 as const };
+    expect(balance([gasto])).toMatchObject({ debtor: 'lucia', amountCents: 2500, totalCents: 5000 });
+    const saldo = { amountCents: 2500, paidBy: 'lucia' as const, split: { jesus: 2500, lucia: 0 }, category: 'otros' as const, day: null, settle: true };
+    expect(balance([gasto, saldo])).toMatchObject({ debtor: null, amountCents: 0, totalCents: 5000 });
+  });
+});

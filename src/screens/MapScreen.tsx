@@ -159,8 +159,11 @@ export function MapScreen() {
   const [fallback, setFallback] = useState(false);
   const [q, setQ] = useState('');
   const [results, setResults] = useState<Found[] | null>(null);
-  const [filter, setFilter] = useState<Filter>('food');
-  const [nearOnMap, setNearOnMap] = useState(false);
+  const [filter, setFilter] = useState<Filter>(() => {
+    const f = new URLSearchParams(location.search).get('f');
+    return FILTERS.some(([k]) => k === f) ? (f as Filter) : 'food';
+  });
+  const [nearOnMap, setNearOnMap] = useState(() => new URLSearchParams(location.search).has('f'));
   const [pois, setPois] = useState<Poi[]>([]);
   const [poiAge, setPoiAge] = useState<number | null>(null);
   const [hotel, setHotel] = useState<LatLng | null>(null);
