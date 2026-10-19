@@ -14,8 +14,8 @@ export const itinerary: Stop[] = [
   { id: 'd1-pincio', day: 1, start: '16:45', placeId: 'pincio', title: 'Mirador del Pincio' },
   { id: 'd1-popolo', day: 1, start: '17:30', placeId: 'piazza-popolo', title: 'Piazza del Popolo y Santa Maria del Popolo', note: 'Caravaggio' },
   { id: 'd1-spagna', day: 1, start: '18:30', placeId: 'piazza-spagna', title: 'Plaza de España y Via Condotti', note: 'No sentarse en la escalinata' },
-  { id: 'd1-peroni', day: 1, start: '20:00', placeId: 'antica-birreria-peroni', title: 'Cena en Antica Birreria Peroni' },
-  { id: 'd1-trevi', day: 1, start: '22:00', placeId: 'trevi', title: 'Fontana di Trevi', note: 'Gratis después de las 22:00 (2 € de 9 a 22; viernes desde 11:30)' },
+  { id: 'd1-peroni', day: 1, start: '21:00', placeId: 'antica-birreria-peroni', title: 'Cena en Antica Birreria Peroni' },
+  { id: 'd1-trevi', day: 1, start: '22:30', placeId: 'trevi', title: 'Fontana di Trevi', note: 'Gratis después de las 22:00 (2 € de 9 a 22; viernes desde 11:30)' },
 
   // ── II · Sábado 31 de octubre ─────────────────────────────────
   { id: 'd2-regoli', day: 2, start: '07:15', placeId: 'regoli', title: 'Desayuno en Regoli', note: 'Efectivo en barra. Después, paseo por Via Merulana' },
@@ -31,10 +31,10 @@ export const itinerary: Stop[] = [
   { id: 'd2-bocca', day: 2, start: '15:20', placeId: 'bocca-verita', title: 'Boca de la Verdad y templos del Foro Boario', note: 'Cola corta a esta hora' },
   { id: 'd2-circo', day: 2, start: '15:50', placeId: 'circo-massimo', title: 'Circo Máximo', note: 'De paso' },
   { id: 'd2-aventino', day: 2, start: '16:30', placeId: 'aventino', title: 'Aventino', note: 'Santa Sabina, Giardino degli Aranci (atardecer), ojo de la cerradura de los Caballeros de Malta' },
-  { id: 'd2-felice', day: 2, start: '19:30', placeId: 'felice-testaccio', title: 'Cena en Felice a Testaccio', ticketId: 'felice', planB: [
+  { id: 'd2-felice', day: 2, start: '21:00', placeId: 'felice-testaccio', title: 'Cena en Felice a Testaccio', ticketId: 'felice', planB: [
     { placeId: 'flavio-velavevodetto', reason: 'Si no hay mesa' },
   ] },
-  { id: 'd2-copas', day: 2, start: '22:30', title: 'Copas de Halloween', note: 'Testaccio o Trastevere' },
+  { id: 'd2-copas', day: 2, start: '23:15', title: 'Copas de Halloween', note: 'Testaccio o Trastevere' },
   { id: 'd2-trapizzino', day: 2, start: '00:30', afterMidnight: true, placeId: 'trapizzino-testaccio', title: 'Trapizzino Testaccio', note: 'Sábado hasta 01:00. Vuelta: Línea B (Piramide) → Termini → Línea A, hasta 01:30' },
 
   // ── III · Domingo 1 de noviembre (festivo: Ognissanti) ────────
@@ -49,11 +49,11 @@ export const itinerary: Stop[] = [
   { id: 'd3-sunset', day: 3, start: '16:45', placeId: 'gianicolo', title: 'Atardecer en el Gianicolo', note: 'Hora exacta con SunCalc' },
   { id: 'd3-tempietto', day: 3, start: '17:30', placeId: 'tempietto', title: 'Tempietto de Bramante' },
   { id: 'd3-trastevere', day: 3, start: '18:00', placeId: 'trastevere', title: 'Trastevere y Santa Maria in Trastevere', note: 'Opcional: helado en Otaleg' },
-  { id: 'd3-marmi', day: 3, start: '19:30', placeId: 'ai-marmi', title: 'Cena en Ai Marmi', planB: [
+  { id: 'd3-marmi', day: 3, start: '21:00', placeId: 'ai-marmi', title: 'Cena en Ai Marmi', planB: [
     { placeId: 'ivo-trastevere', reason: 'Si hay mucha cola' },
     { placeId: 'da-augusto', reason: 'Si hay mucha cola' },
   ] },
-  { id: 'd3-calisto', day: 3, start: '21:30', placeId: 'bar-san-calisto', title: 'Copa en Bar San Calisto' },
+  { id: 'd3-calisto', day: 3, start: '22:45', placeId: 'bar-san-calisto', title: 'Copa en Bar San Calisto' },
   { id: 'd3-back', day: 3, placeId: 'hotel-soha', title: 'Vuelta al hotel', note: 'El metro cierra a las 23:30 el domingo: tranvía 8, taxi o 35–40 min a pie' },
 
   // ── IV · Lunes 2 de noviembre ─────────────────────────────────
@@ -71,7 +71,7 @@ export const itinerary: Stop[] = [
   { id: 'd4-vittoriano', day: 4, start: '16:40', placeId: 'vittoriano', title: 'Terraza del Vittoriano', note: 'Reducida 5 €' },
   { id: 'd4-campidoglio', day: 4, start: '17:45', placeId: 'campidoglio', title: 'Campidoglio', note: 'Vistas del Foro al anochecer' },
   { id: 'd4-boccione', day: 4, start: '18:15', placeId: 'boccione', title: 'Boccione', note: 'Lunes hasta las 19:00 · solo efectivo' },
-  { id: 'd4-taverna', day: 4, start: '19:45', placeId: 'taverna-fori', title: 'Cena en Taverna dei Fori Imperiali', ticketId: 'taverna' },
+  { id: 'd4-taverna', day: 4, start: '20:30', placeId: 'taverna-fori', title: 'Cena en Taverna dei Fori Imperiali', ticketId: 'taverna' },
 
   // ── V · Martes 3 de noviembre ─────────────────────────────────
   { id: 'd5-alarm', day: 5, start: '05:00', title: 'Alarma', note: 'Mochilas hechas la noche antes', leg: true },
