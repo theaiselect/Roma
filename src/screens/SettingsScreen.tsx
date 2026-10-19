@@ -71,7 +71,8 @@ export function SettingsScreen() {
       <section class="card stack">
         <h2>Código del viaje</h2>
         <p class="small muted">El mismo en los dos móviles. Sin él, todo funciona pero no se comparte.</p>
-        <input type="password" autoComplete="off" value={code} onInput={(e) => setCode((e.target as HTMLInputElement).value)} aria-label="Código del viaje" />
+        <input type="password" autoComplete="off" value={code} onInput={(e) => setCode((e.target as HTMLInputElement).value)} aria-label="Código del viaje" placeholder="dd/mm/aaaa" />
+        <p class="small muted">Pista: nuestra fecha, con barras (dd/mm/aaaa).</p>
         <button type="button" class="btn primary" disabled={code.trim().length < 6 || code.trim() === s.tripCode} onClick={() => { updateSettings({ tripCode: code.trim() }); void requestSync(true); }}>Guardar código</button>
         <button type="button" class="btn" disabled={syncing} onClick={() => { setSyncing(true); void requestSync(true).finally(() => setSyncing(false)); }}>{syncing ? 'Sincronizando…' : 'Forzar sincronización'}</button>
       </section>

@@ -10,7 +10,9 @@ export function json(status: number, body: unknown): Response {
 
 /** SHA-256 en hexadecimal del código del viaje (lo que va en TRIP_CODE_HASH). */
 export function hashTripCode(code: string): string {
-  return createHash('sha256').update(code.trim(), 'utf8').digest('hex');
+  // Tolerante al teclado del móvil: mayúsculas y separadores (15/06/2026, 15-06-2026, 15.06.2026, 15 06 2026) valen igual.
+  const norm = code.trim().toLowerCase().replace(/[\s.\-/]+/g, '/');
+  return createHash('sha256').update(norm, 'utf8').digest('hex');
 }
 
 /**

@@ -33,3 +33,12 @@ describe('código del viaje', () => {
     expect(await checkTripCode(req('gelato-trevi-luna', '8.8.8.8'), store)).toBeNull();
   });
 });
+
+describe('código del viaje: tolerancia de teclado', () => {
+  it('acepta separadores y mayúsculas equivalentes', () => {
+    expect(hashTripCode('15-06-2026')).toBe(hashTripCode('15/06/2026'));
+    expect(hashTripCode(' 15.06.2026 ')).toBe(hashTripCode('15/06/2026'));
+    expect(hashTripCode('Gelato Trevi')).toBe(hashTripCode('gelato/trevi'));
+    expect(hashTripCode('15/06/2027')).not.toBe(hashTripCode('15/06/2026'));
+  });
+});
