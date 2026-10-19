@@ -206,3 +206,13 @@ table.simple td, table.simple th { text-align: left; padding: 0.35rem 0; border-
 .scroll-row > * { flex: none; }
 .voices .card { padding: 0.8rem; }
 .voices textarea { min-height: 9rem; resize: vertical; }
+
+/* ── Impresión (Libro del viaje) ───────────────────────────── */
+.print-only { display: none; }
+@media print {
+  .topbar, .tabbar, .lost-fab, .sim, .update, .no-print, nav.legend, .page-title { display: none !important; }
+  .print-only { display: block; }
+  body { background: #fff; color: #000; }
+  .content { padding: 0; max-width: none; }
+  .card { box-shadow: none; border: 1px solid #ddd; }
+}

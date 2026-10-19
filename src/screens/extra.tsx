@@ -9,6 +9,9 @@ import { rules } from '@/data/rules';
 import { days, travellers } from '@/data/trip';
 import type { Who } from '@/data/types';
 import { Expenses } from '@/screens/Expenses';
+import { TrackButton } from '@/components/Culture';
+import { audioguide } from '@/data/audioguide';
+import { legends } from '@/data/legends';
 import { BackTitle } from '@/screens/More';
 import { setCheck, useChecks } from '@/lib/checks';
 import { remove, save, useKind, type Entity } from '@/lib/db';
@@ -233,7 +236,31 @@ function Calendar() {
   );
 }
 
+/** Miniaudioguía (F28) y leyendas de amor (F29). */
+function Guide() {
+  return (
+    <div class="stack-lg">
+      <BackTitle title="Audioguía y leyendas" />
+      <p class="small muted">Se lee con la voz en español del móvil y funciona sin conexión.</p>
+      {audioguide.map((t) => (
+        <article key={t.id} class="card stack" style={{ gap: '0.4rem' }}>
+          <div class="spread"><h3>{t.title}</h3><TrackButton track={t} /></div>
+          <details class="planb"><summary>Leer el texto</summary><p class="small">{t.text}</p></details>
+        </article>
+      ))}
+      <h2>Leyendas de amor</h2>
+      {legends.map((l) => (
+        <article key={l.id} class="card stack" style={{ gap: '0.3rem' }}>
+          <h3>♥ {l.title}</h3>
+          <p class="small">{l.text}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 const SECTIONS: Record<string, () => preact.JSX.Element> = {
+  audioguia: Guide,
   gastos: Expenses, monumentos: Monuments, frases: Phrases, carta: Menu, maleta: Packing, normas: Rules, regalos: Gifts, calendario: Calendar,
 };
 

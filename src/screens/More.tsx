@@ -17,6 +17,7 @@ export const moreItems: { href: string; label: string; icon: IconName }[] = [
   { href: '/mas/carta', label: 'Chuleta de la carta romana', icon: 'book' },
   { href: '/mas/transporte', label: 'Transporte', icon: 'train' },
   { href: '/mas/frases', label: 'Frases en italiano', icon: 'speaker' },
+  { href: '/mas/audioguia', label: 'Audioguía y leyendas', icon: 'monument' },
   { href: '/mas/emergencias', label: 'Emergencias y salud', icon: 'sos' },
   { href: '/mas/maleta', label: 'Maleta y noche anterior', icon: 'bag' },
   { href: '/mas/normas', label: 'Normas y multas', icon: 'rule' },

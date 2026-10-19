@@ -33,3 +33,25 @@ export function voiceHelp(ios: boolean): string {
     ? 'En el iPhone: Ajustes → Accesibilidad → Contenido leído → Voces → Italiano, y descarga una voz.'
     : 'En Android: Ajustes → Sistema → Idiomas → Salida de texto a voz → Servicios de voz de Google → Instalar datos de voz → Italiano.';
 }
+
+// Voz en español para la miniaudioguía (F28).
+export async function spanishVoice(): Promise<SpeechSynthesisVoice | null> {
+  const v = await voices();
+  return v.find((x) => x.lang === 'es-ES' && x.localService) ?? v.find((x) => x.lang === 'es-ES') ?? v.find((x) => x.lang?.startsWith('es')) ?? null;
+}
+
+export async function speakSpanish(text: string, onEnd?: () => void): Promise<boolean> {
+  if (!('speechSynthesis' in window)) return false;
+  const voice = await spanishVoice();
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'es-ES';
+  u.rate = 1;
+  if (onEnd) u.onend = onEnd;
+  speechSynthesis.speak(u);
+  return true;
+}
+
+export function stopSpeaking(): void {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
