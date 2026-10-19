@@ -2,6 +2,7 @@ import { db, getMeta, setMeta, DB_EVENT, type Entity } from '@/lib/db';
 import { mergeIncoming } from '@/lib/merge';
 import { getSettings } from '@/lib/settings';
 import { reportSync } from '@/lib/sync-status';
+import { romeToUtc } from '@/lib/time';
 
 // Sincronización local-first: cola → push → pull. Nada se bloquea sin conexión.
 
@@ -9,12 +10,78 @@ let running: Promise<void> | null = null;
 let debounce: number | null = null;
 let disabledReason: string | null = null;
 
-function headers(): HeadersInit | null {
-  const code = getSettings().tripCode;
-  return code ? { 'content-type': 'application/json', 'x-trip-code': code } : null;
+function headers(): Record<string, string> | null {
+  const { tripCode, profile } = getSettings();
+  return tripCode ? { 'content-type': 'application/json', 'x-trip-code': tripCode, 'x-who': profile ?? '' } : null;
 }
 
-async function push(h: HeadersInit): Promise<void> {
+// ── Archivos ────────────────────────────────────────────────────
+const MAX_UPLOAD = 4 * 1024 * 1024;
+
+async function uploadBlobs(h: Record<string, string>): Promise<void> {
+  const d = await db();
+  const pending = (await d.getAll('blobs')).filter((b) => !b.uploaded);
+  for (const b of pending) {
+    if (b.blob.size > MAX_UPLOAD) continue; // demasiado grande para el servidor: se queda solo en este móvil
+    const res = await fetch(`/api/blob?id=${b.id}`, { method: 'POST', headers: { ...h, 'content-type': b.mime || 'application/octet-stream' }, body: b.blob });
+    if (!res.ok) throw new Error(`blob ${res.status}`);
+    await d.put('blobs', { ...b, uploaded: true });
+  }
+}
+
+/** Descarga un archivo del servidor si no está en este móvil. Devuelve true si ya está. */
+export async function ensureBlob(id: string): Promise<boolean> {
+  const d = await db();
+  if (await d.get('blobs', id)) return true;
+  const h = headers();
+  if (!h || !navigator.onLine) return false;
+  const res = await fetch(`/api/blob?id=${id}`, { headers: h });
+  if (!res.ok) return false;
+  const blob = await res.blob();
+  await d.put('blobs', { id, blob, mime: blob.type, uploaded: true, createdAt: Date.now() });
+  window.dispatchEvent(new CustomEvent(DB_EVENT));
+  return true;
+}
+
+/** Las entradas (QR/PDF) se descargan siempre para tenerlas sin conexión. */
+async function prefetchTickets(): Promise<void> {
+  const d = await db();
+  const tickets = (await d.getAllFromIndex('entities', 'kind', 'ticket')).filter((t) => !t.deleted);
+  for (const t of tickets) if (typeof t.blobId === 'string') await ensureBlob(t.blobId).catch(() => false);
+}
+
+// ── Cartas, cápsula, votos y respuestas que llegaron cerrados ───
+function canUnlock(e: Entity, mine: Entity[], now: number): boolean {
+  if (e.kind === 'letter' || e.kind === 'capsule') return typeof e.unlockAt === 'string' && now >= romeInstantClient(e.unlockAt);
+  const key = e.kind === 'vote' ? 'topic' : 'questionId';
+  if (mine.some((m) => m.kind === e.kind && m[key] === e[key])) return true;
+  const date = /(\d{4}-\d{2}-\d{2})$/.exec(String(e[key] ?? ''))?.[1];
+  return date ? now >= romeInstantClient(date) + 86_400_000 - 3600_000 : false;
+}
+
+function romeInstantClient(s: string): number {
+  const [date, time = '00:00'] = s.split('T') as [string, string?];
+  return romeToUtc(date, time);
+}
+
+async function refreshLocked(h: Record<string, string>): Promise<void> {
+  const d = await db();
+  const all = await d.getAll('entities');
+  const me = getSettings().profile;
+  const mine = all.filter((e) => e.author === me && !e.deleted);
+  const now = Date.now();
+  const ids = all.filter((e) => e.locked && canUnlock(e, mine, now)).map((e) => e.id);
+  if (!ids.length) return;
+  const res = await fetch(`/api/sync?ids=${ids.map(encodeURIComponent).join(',')}`, { headers: h });
+  if (!res.ok) return;
+  const body = (await res.json()) as { entities: Entity[] };
+  const tx = d.transaction('entities', 'readwrite');
+  for (const e of body.entities) if (!e.locked) await tx.store.put(e);
+  await tx.done;
+  window.dispatchEvent(new CustomEvent(DB_EVENT));
+}
+
+async function push(h: Record<string, string>): Promise<void> {
   const d = await db();
   for (;;) {
     const queued = (await d.getAll('outbox')).slice(0, 100);
@@ -41,7 +108,7 @@ async function push(h: HeadersInit): Promise<void> {
   }
 }
 
-async function pull(h: HeadersInit): Promise<number> {
+async function pull(h: Record<string, string>): Promise<number> {
   const since = (await getMeta<number>('lastPullAt')) ?? 0;
   const res = await fetch(`/api/sync?since=${since}`, { headers: h });
   if (!res.ok) throw new Error(`pull ${res.status}`);
@@ -71,14 +138,17 @@ export function requestSync(force = false): Promise<void> {
   if (!h || !navigator.onLine || (disabledReason && !force)) return Promise.resolve();
   running = (async () => {
     try {
+      await uploadBlobs(h);
       await push(h);
       await pull(h);
+      await refreshLocked(h);
+      await prefetchTickets();
       disabledReason = null;
       reportSync({ ok: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       // 401: código incorrecto. 501/503: servidor aún sin configurar. No insistimos cada 30 s.
-      if (/ (401|501|503)$/.test(msg)) disabledReason = msg;
+      if (/ (401|429|501|503)$/.test(msg)) disabledReason = msg;
       reportSync({ ok: false, error: msg });
     } finally {
       running = null;

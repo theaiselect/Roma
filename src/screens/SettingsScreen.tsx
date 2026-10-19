@@ -8,6 +8,7 @@ import { resetLocalSettings, updateSettings, useSettings } from '@/lib/settings'
 import { requestSync, syncDisabledReason } from '@/lib/sync';
 import { syncInfo } from '@/lib/sync-status';
 import { italianVoice } from '@/lib/tts';
+import { downloadBackup, restoreBackup } from '@/lib/backup';
 
 declare const __APP_VERSION__: string;
 
@@ -77,6 +78,19 @@ export function SettingsScreen() {
       <section class="card stack">
         <h2>Estado</h2>
         <Status />
+      </section>
+      <section class="card stack">
+        <h2>Copia de seguridad</h2>
+        <p class="small muted">Todo lo vuestro (gastos, diario, fotos, entradas, casillas) en un archivo. Guárdalo en Drive o envíatelo por WhatsApp.</p>
+        <button type="button" class="btn" onClick={() => void downloadBackup()}>Exportar copia</button>
+        <label class="btn ghost">
+          Restaurar desde un archivo
+          <input type="file" accept="application/json,.json" class="sr-only" onChange={(e) => {
+            const f = (e.target as HTMLInputElement).files?.[0];
+            if (!f) return;
+            void f.text().then(restoreBackup).then((r) => alert(`Restaurado: ${r.entities} datos y ${r.blobs} archivos.`)).catch((err: Error) => alert(`No se pudo restaurar: ${err.message}`));
+          }} />
+        </label>
       </section>
       <section class="card stack">
         <h2>Borrar datos de este móvil</h2>

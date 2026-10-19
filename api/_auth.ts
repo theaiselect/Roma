@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
+import type { Store } from './_core.js';
 
 export function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -13,20 +14,40 @@ export function hashTripCode(code: string): string {
 }
 
 /**
- * Comprueba la cabecera x-trip-code contra TRIP_CODE_HASH.
- * Devuelve null si es válida, o la respuesta de error que hay que mandar.
- * (El bloqueo tras 10 fallos por minuto se añade con Redis en la fase 2.)
+ * Hash esperado: TRIP_CODE_HASH (SHA-256) o, si solo existe TRIP_CODE, su hash.
+ * TRIP_CODE es más cómodo de poner a mano en Vercel; las dos son variables solo de servidor.
  */
-export function checkTripCode(req: Request): Response | null {
-  const expected = process.env.TRIP_CODE_HASH?.trim().toLowerCase();
-  if (!expected || !/^[0-9a-f]{64}$/.test(expected)) {
-    return json(503, { error: 'not_configured', message: 'Falta TRIP_CODE_HASH en Vercel.' });
-  }
+function expectedHash(): string | null {
+  const h = process.env.TRIP_CODE_HASH?.trim().toLowerCase();
+  if (h && /^[0-9a-f]{64}$/.test(h)) return h;
+  const plain = process.env.TRIP_CODE?.trim();
+  return plain ? hashTripCode(plain) : null;
+}
+
+export function tripCodeConfigured(): boolean {
+  return expectedHash() !== null;
+}
+
+export function clientIp(req: Request): string {
+  return (req.headers.get('x-forwarded-for') ?? '').split(',')[0]!.trim() || 'unknown';
+}
+
+/**
+ * Comprueba la cabecera x-trip-code. Devuelve null si es válida, o la respuesta de error.
+ * Con almacén: tras 10 fallos en un minuto, bloquea esa IP 15 minutos.
+ */
+export async function checkTripCode(req: Request, store?: Store | null): Promise<Response | null> {
+  const expected = expectedHash();
+  if (!expected) return json(503, { error: 'not_configured', message: 'Falta TRIP_CODE en Vercel.' });
+  const ip = clientIp(req);
+  if (store && (await store.isBlocked(ip))) return json(429, { error: 'too_many_attempts' });
   const code = req.headers.get('x-trip-code');
-  if (!code) return json(401, { error: 'unauthorized' });
-  const got = Buffer.from(hashTripCode(code), 'hex');
+  const got = code ? Buffer.from(hashTripCode(code), 'hex') : Buffer.alloc(0);
   const want = Buffer.from(expected, 'hex');
-  if (got.length !== want.length || !timingSafeEqual(got, want)) return json(401, { error: 'unauthorized' });
+  if (got.length !== want.length || !timingSafeEqual(got, want)) {
+    if (store && (await store.failHit(ip)) > 10) await store.block(ip, 15 * 60);
+    return json(401, { error: 'unauthorized' });
+  }
   return null;
 }
 

@@ -48,3 +48,14 @@ describe('integridad del contenido', () => {
     expect(monuments.find((m) => m.name === 'Galleria Borghese')?.flag).toBe('ticket');
   });
 });
+
+describe('plan de lluvia', () => {
+  it('cada alternativa apunta a un sitio que existe', async () => {
+    const { rainPlans } = await import('@/data/alternatives');
+    for (const p of rainPlans) for (const s of p.stops) if (s.placeId) expect(placeById.has(s.placeId), s.id).toBe(true);
+  });
+  it('los monumentos del itinerario tienen coordenadas verificadas salvo los que no las publican', () => {
+    const sin = itinerary.map((s) => s.placeId && placeById.get(s.placeId)).filter((p) => p && p.kind === 'monument' && p.lat === undefined).map((p) => p && p.id);
+    expect(sin).toEqual(['pincio']);
+  });
+});

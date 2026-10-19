@@ -1,17 +1,16 @@
 import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
 import { StopCard } from '@/components/StopCard';
-import { itinerary } from '@/data/itinerary';
 import { placeById } from '@/data/places';
 import { days, luciaTrain, travellers, tripStart } from '@/data/trip';
 import { dayAlerts, type Alert } from '@/lib/alerts';
 import { useNow } from '@/lib/clock';
 import { useSettings } from '@/lib/settings';
-import { formatDuration, nowState, timeline } from '@/lib/schedule';
+import { formatDuration, nowState } from '@/lib/schedule';
+import { useTimeline } from '@/lib/plan-state';
 import { daysUntil, romeParts, weekdayOf } from '@/lib/time';
 import { TodayExtras } from '@/screens/today-extras';
 
-const tl = timeline(itinerary);
 
 export function AlertList({ alerts }: { alerts: Alert[] }) {
   if (!alerts.length) return null;
@@ -30,6 +29,7 @@ export function AlertList({ alerts }: { alerts: Alert[] }) {
 export function Today() {
   const now = useNow(15_000);
   const settings = useSettings();
+  const tl = useTimeline();
   const parts = romeParts(now);
   const state = nowState(tl, now);
   const tripDay = days.find((d) => d.date === parts.date);

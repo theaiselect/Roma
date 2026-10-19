@@ -3,6 +3,36 @@ import type { Place } from './types';
 // Fuente: «Amor · Roma — Documento de implementación» (18 oct 2026).
 // verified:false = dato sin comprobar en web oficial o sin coordenadas en el documento.
 const DOC = 'Documento de implementación';
+const WIKI = 'Wikipedia (coordenadas del artículo), consultado el 19 oct 2026';
+
+// Coordenadas comprobadas en Wikipedia. El Pincio y el hotel no tienen: «Cómo llegar» usa el nombre y la dirección.
+const MONUMENT_COORDS: Record<string, [number, number]> = {
+  'villa-borghese': [41.91417, 12.49222],
+  'piazza-popolo': [41.9107, 12.4763],
+  'piazza-spagna': [41.9061, 12.4828],
+  'trevi': [41.90083, 12.48306],
+  'colosseo': [41.8903, 12.4922],
+  'palatino': [41.888948, 12.48682],
+  'foro-romano': [41.8922, 12.4852],
+  'ghetto': [41.892436, 12.478533],
+  'teatro-marcello': [41.89191, 12.47948],
+  'bocca-verita': [41.88806, 12.48167],
+  'circo-massimo': [41.8859, 12.4857],
+  'aventino': [41.884444, 12.479722],
+  'palazzo-barberini': [41.90361, 12.49028],
+  'castel-santangelo': [41.9031, 12.4663],
+  'gianicolo': [41.88875, 12.46417],
+  'tempietto': [41.88875, 12.46641],
+  'trastevere': [41.88944, 12.46972],
+  'musei-vaticani': [41.9064, 12.4544],
+  'san-pietro': [41.90222, 12.45333],
+  'cupola': [41.90222, 12.45333],
+  'navona': [41.899, 12.4731],
+  'pantheon': [41.8986, 12.4768],
+  'vittoriano': [41.8947, 12.4831],
+  'campidoglio': [41.89333, 12.48278],
+  'termini': [41.90083, 12.50194],
+};
 
 export const places: Place[] = [
   // ── Alojamiento ───────────────────────────────────────────────
@@ -74,10 +104,21 @@ export const places: Place[] = [
     ['pantheon', 'Panteón', 'monument'],
     ['vittoriano', 'Terraza del Vittoriano', 'monument'],
     ['campidoglio', 'Campidoglio', 'monument'],
-  ] as const).map(([id, name, kind]): Place => ({ id, name, kind, verified: false })),
+    ['termini', 'Roma Termini', 'transport'],
+  ] as const).map(([id, name, kind]): Place => {
+    const c = MONUMENT_COORDS[id];
+    return c ? { id, name, kind, lat: c[0], lng: c[1], verified: true, source: WIKI } : { id, name, kind, verified: false };
+  }),
+
+  // Alternativas bajo techo (plan de lluvia)
+  { id: 'musei-capitolini', name: 'Museos Capitolinos', kind: 'monument', lat: 41.8931, lng: 12.4828, verified: true, source: WIKI },
+  { id: 'san-luigi', name: 'San Luigi dei Francesi', kind: 'monument', lat: 41.89972, lng: 12.47472, verified: true, source: WIKI },
+  { id: 'sant-ignazio', name: "Sant'Ignazio", kind: 'monument', lat: 41.899, lng: 12.479778, verified: true, source: WIKI },
+  { id: 'san-pietro-vincoli', name: 'San Pietro in Vincoli', kind: 'monument', lat: 41.89389, lng: 12.49306, verified: true, source: WIKI },
+  { id: 'santa-maria-vittoria', name: 'Santa Maria della Vittoria', kind: 'monument', verified: false },
 
   // ── Transporte ────────────────────────────────────────────────
-  { id: 'termini', name: 'Roma Termini', kind: 'transport', note: 'Leonardo Express: andenes 23–24', verified: false },
+  
   { id: 'barberini-metro', name: 'Metro Barberini (Línea A)', kind: 'transport', verified: false },
   { id: 'fco', name: 'Aeropuerto de Fiumicino (FCO)', kind: 'transport', verified: false },
   { id: 'svq', name: 'Aeropuerto de Sevilla (SVQ)', kind: 'transport', verified: false },

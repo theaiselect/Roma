@@ -1,21 +1,20 @@
 import { useEffect } from 'preact/hooks';
 import { useRoute } from 'preact-iso';
 import { StopCard } from '@/components/StopCard';
-import { itinerary } from '@/data/itinerary';
 import { days } from '@/data/trip';
 import type { DayNum } from '@/data/types';
 import { AlertList } from '@/screens/Today';
 import { dayAlerts } from '@/lib/alerts';
 import { useNow } from '@/lib/clock';
 import { setCheck, useChecks } from '@/lib/checks';
-import { nowState, timeline } from '@/lib/schedule';
+import { nowState, type TimedStop } from '@/lib/schedule';
+import { useTimeline } from '@/lib/plan-state';
 import { romeParts, weekdayOf } from '@/lib/time';
 import { legViews } from '@/lib/travel';
 import { PlanExtras } from '@/screens/plan-extras';
 
-const tl = timeline(itinerary);
 
-function TravelMode({ day, now }: { day: DayNum; now: number }) {
+function TravelMode({ day, now, tl }: { day: DayNum; now: number; tl: TimedStop[] }) {
   const checks = useChecks('legs');
   const legs = tl.filter((s) => s.day === day && s.leg);
   const done = new Set([...checks.values()].filter((c) => c.done).map((c) => c.itemId));
@@ -53,6 +52,7 @@ function TravelMode({ day, now }: { day: DayNum; now: number }) {
 export function Plan() {
   const { params } = useRoute();
   const now = useNow(30_000);
+  const tl = useTimeline();
   const today = days.find((d) => d.date === romeParts(now).date);
   const day = (Number(params.day) || today?.day || 1) as DayNum;
   const info = days.find((d) => d.day === day)!;
@@ -77,7 +77,7 @@ export function Plan() {
       <div class="page-title"><h1>{info.label}</h1></div>
       <div class="frieze" aria-hidden="true" />
       <AlertList alerts={dayAlerts(day, weekdayOf(info.date))} />
-      {(day === 1 || day === 5) && <TravelMode day={day} now={now} />}
+      {(day === 1 || day === 5) && <TravelMode day={day} now={now} tl={tl} />}
       <PlanExtras day={day} />
       <section class="stack" aria-label="Paradas">
         {stops.filter((s) => !s.leg).map((s) => (

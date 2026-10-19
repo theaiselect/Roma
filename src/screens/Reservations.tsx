@@ -7,6 +7,7 @@ import type { ReservationStatus } from '@/data/types';
 import { BackTitle } from '@/screens/More';
 import { setCheck, useChecks } from '@/lib/checks';
 import { getBlob, putBlob, remove, save, useKind, type Entity } from '@/lib/db';
+import { ensureBlob } from '@/lib/sync';
 
 export interface TicketEntity extends Entity {
   kind: 'ticket';
@@ -24,6 +25,7 @@ const STATUS: Record<ReservationStatus, { label: string; cls: string }> = {
 };
 
 export async function openTicket(t: TicketEntity): Promise<void> {
+  await ensureBlob(t.blobId).catch(() => false);
   const blob = await getBlob(t.blobId);
   if (!blob) { alert('El archivo aún no se ha descargado en este móvil. Conéctate un momento y vuelve a intentarlo.'); return; }
   const url = URL.createObjectURL(blob);
@@ -32,6 +34,7 @@ export async function openTicket(t: TicketEntity): Promise<void> {
 }
 
 export async function shareTicket(t: TicketEntity): Promise<void> {
+  await ensureBlob(t.blobId).catch(() => false);
   const blob = await getBlob(t.blobId);
   if (!blob) return;
   const file = new File([blob], t.name, { type: t.mime });

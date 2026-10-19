@@ -1,6 +1,7 @@
 import type { DayKey, Place, Stop } from '@/data/types';
 import { days } from '@/data/trip';
 import { romeParts, romeToUtc } from '@/lib/time';
+import { sunsetAt } from '@/lib/sun';
 
 export interface TimedStop extends Stop {
   /** Instante de inicio (ms) o null si la parada no tiene hora. */
@@ -23,7 +24,9 @@ export function timeline(stops: Stop[]): TimedStop[] {
   return stops.map((s) => {
     const base = dayDate(s.day);
     const date = s.afterMidnight ? addDays(base, 1) : base;
-    return { ...s, date, at: s.start ? romeToUtc(date, s.start) : null };
+    // «Hora exacta con SunCalc» → la hora real del atardecer de ese día.
+    const note = s.note?.includes('SunCalc') ? `El sol se pone a las ${romeParts(sunsetAt(date)).time}` : s.note;
+    return { ...s, note, date, at: s.start ? romeToUtc(date, s.start) : null };
   });
 }
 

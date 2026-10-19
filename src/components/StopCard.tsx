@@ -1,6 +1,7 @@
 import { placeById } from '@/data/places';
 import type { Place } from '@/data/types';
 import { Icon } from '@/components/Icon';
+import { ArrivalButton } from '@/components/Arrival';
 import { directionsUrl } from '@/lib/maps';
 import { openStatus, type TimedStop } from '@/lib/schedule';
 
@@ -79,6 +80,7 @@ export function StopCard({ stop, now, current = false, showDate = false }: { sto
             </details>
           )}
           {place && <PlaceActions place={place} />}
+          {place && stop.at !== null && stop.at > now && stop.at - now < 12 * 3600_000 && <ArrivalButton place={place} at={stop.at} />}
         </div>
       </div>
     </article>
