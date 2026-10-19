@@ -1,5 +1,5 @@
 import { json, redisEnv, tripCodeConfigured } from './_auth.js';
-import { blobConfigured, blobToken } from './_blobToken.js';
+import { blobConfigured } from './_blobToken.js';
 
 // Estado de la configuración del servidor. Solo booleanos: no expone ningún secreto.
 export function GET(): Response {
