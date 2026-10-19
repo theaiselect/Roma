@@ -16,7 +16,7 @@ def phone(b, who):
     pg = ctx.new_page()
     pg.goto(f'{BASE}/?now={NOW}')
     pg.get_by_role('button', name=who).click()
-    pg.get_by_placeholder(re.compile('dd/mm')).fill('testtest')
+    pg.get_by_placeholder(re.compile('aaaa')).fill('testtest')
     pg.get_by_role('button', name='Continuar').click()
     pg.get_by_role('button', name='Ya está, seguir').click()
     pg.get_by_role('button', name='Entrar igualmente').click()

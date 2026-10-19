@@ -39,6 +39,7 @@ describe('código del viaje: tolerancia de teclado', () => {
     expect(hashTripCode('15-06-2026')).toBe(hashTripCode('15/06/2026'));
     expect(hashTripCode(' 15.06.2026 ')).toBe(hashTripCode('15/06/2026'));
     expect(hashTripCode('Gelato Trevi')).toBe(hashTripCode('gelato/trevi'));
+    expect(hashTripCode('15062026')).toBe(hashTripCode('15/06/2026'));
     expect(hashTripCode('15/06/2027')).not.toBe(hashTripCode('15/06/2026'));
   });
 });

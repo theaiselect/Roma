@@ -41,10 +41,10 @@ export function Onboarding() {
         <section class="card stack">
           <h2>Código del viaje</h2>
           <p>Es la contraseña que solo sabéis los dos. Sirve para que vuestros gastos, diario y fotos se compartan entre los dos móviles y nadie más pueda verlos.</p>
-          <p class="small"><b>Pista:</b> nuestra fecha. Día, mes y año, con barras: dd/mm/aaaa.</p>
+          <p class="small"><b>Pista:</b> nuestra fecha. Día, mes y año (dd/mm/aaaa); vale con o sin barras.</p>
           <label class="field">
             Código
-            <input type="password" autoComplete="off" value={code} onInput={(e) => setCode((e.target as HTMLInputElement).value)} placeholder="dd/mm/aaaa" inputMode="numeric" />
+            <input type="password" autoComplete="off" value={code} onInput={(e) => setCode((e.target as HTMLInputElement).value)} placeholder="dd/mm/aaaa" />
           </label>
           <button type="button" class="btn primary block" disabled={code.trim().length < 6}
             onClick={() => { updateSettings({ tripCode: code.trim() }); setStep(isStandalone() ? 'download' : 'install'); }}>
