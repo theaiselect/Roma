@@ -241,6 +241,16 @@ export async function reverseOffline(p: LatLng): Promise<Found | null> {
 
 // ── Archivos (entradas, fotos, tiques, audios) ──────────────────
 const BLOB_FIELDS = ['blobId', 'photoBlobId', 'voiceBlobId'];
+const BLOB_LIST_FIELDS = ['voiceBlobIds', 'photoBlobIds'];
+
+/** Ids de archivos que cita un dato (campos sueltos y listas, p. ej. varias notas de voz en un día del diario). */
+export function blobIdsOf(e: object): string[] {
+  const r = e as Record<string, unknown>;
+  const out: string[] = [];
+  for (const f of BLOB_FIELDS) { const v = r[f]; if (typeof v === 'string') out.push(v); }
+  for (const f of BLOB_LIST_FIELDS) { const v = r[f]; if (Array.isArray(v)) for (const x of v) if (typeof x === 'string') out.push(x); }
+  return out;
+}
 
 /** Ids de archivos que cita algún dato del viaje, y cuántos faltan en este móvil. */
 export async function blobStatus(): Promise<{ total: number; missing: string[] }> {
@@ -248,7 +258,7 @@ export async function blobStatus(): Promise<{ total: number; missing: string[] }
   const ids = new Set<string>();
   for (const e of await d.getAll('entities')) {
     if (e.deleted) continue;
-    for (const f of BLOB_FIELDS) { const v = (e as Record<string, unknown>)[f]; if (typeof v === 'string') ids.add(v); }
+    for (const id of blobIdsOf(e)) ids.add(id);
   }
   const missing: string[] = [];
   for (const id of ids) if (!(await d.get('blobs', id))) missing.push(id);

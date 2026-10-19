@@ -42,7 +42,8 @@ Auth: cabecera `x-trip-code` (api/_auth.ts normaliza: minúsculas, sin espacios,
 ## Pendiente (de la app) / sin verificar
 - Probar en móviles reales: subir foto/entrada y verla en el otro móvil; «Preparar para ir sin conexión» con wifi y probar en modo avión; voz de navegación; instalación en iPhone; PDF del libro; botones de compartir; cápsula del tiempo.
 - Servicios reales (OpenFreeMap, OSRM, Photon, Overpass) solo probados con simulaciones: el entorno de pruebas no tiene internet.
-- Sin mejorar a fondo todavía: Plan, Diario, Cartas, Votos, Postal, Canción, Libro, Reservas, Ajustes.
+- Pantallas mejoradas a fondo (fase 4): Plan (resumen del día, casilla «hecho» en cada parada con lista `stops`, estado de la entrada por parada, día anterior/siguiente), Reservas (resumen, grupos, «Ya está hecho», nota propia en lista `resnotes`, visor de entradas a pantalla completa `TicketViewer`/`lib/ticket-view.ts`), Diario (guarda solo lo cambiado y al salir, varias notas de voz), Cartas (editar antes de abrir, se desbloquean con la pantalla abierta), Votos (resumen de coincidencias, día futuro bloqueado), Postal (3 estilos, vista previa automática), Canción (una por persona y día, cualquier enlace https), Libro (archivo HTML autónomo con fotos, `lib/book.ts`), Ajustes («Probar conexión y código», «Buscar versión nueva», descarga sin conexión).
+- Pruebas: `tests/unit/phase4.test.ts` y `e2e/screens.py` (servidor e2e recién arrancado en :5199; reiniciarlo con `kill $(lsof -ti tcp:5199)` antes de cada suite que escribe estado).
 - Fase de rediseño visual pendiente (orden acordado: primero funcionar, luego bonito).
 
 ## Cómo probar

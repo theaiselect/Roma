@@ -17,7 +17,7 @@ import { romeParts } from '@/lib/time';
 import { ageText, climateNormals, isRainy, useForecast, weatherText } from '@/lib/weather';
 import { DailyQuestionCard } from '@/screens/us-daily';
 
-function WeatherCard({ date }: { date: string }) {
+export function WeatherCard({ date }: { date: string }) {
   const f = useForecast();
   const day = f?.days.find((d) => d.date === date) ?? (f ? undefined : climateNormals([date]).days[0]);
   const sunset = romeParts(sunsetAt(date)).time;
@@ -97,7 +97,7 @@ function TicketsSoon({ now }: { now: number }) {
           <div key={rid} class="stack" style={{ gap: '0.4rem' }}>
             <b>{r?.title}</b>
             {files.length
-              ? files.map((t) => <button type="button" key={t.id} class="btn primary block" onClick={() => void openTicket(t)}><Icon name="ticket" /> Abrir {t.name}</button>)
+              ? files.map((t) => <button type="button" key={t.id} class="btn primary block" onClick={() => void openTicket(t, files)}><Icon name="ticket" /> Abrir {t.name}</button>)
               : <a class="btn block" href="/mas/reservas">Aún no hay archivo: añadirlo</a>}
           </div>
         );

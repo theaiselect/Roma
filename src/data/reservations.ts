@@ -13,5 +13,6 @@ export const reservations: Reservation[] = [
   { id: 'ryanair', title: 'Ryanair ida y vuelta', status: 'pending', note: 'Check-in online y tarjeta de embarque en myRyanair. Localizadores pendientes.' },
   { id: 'madrid-plasencia', title: 'Madrid → Plasencia', status: 'todo', day: 5, note: 'Desde las 13:30–14:00.' },
   { id: 'hotel-mensaje', title: 'Mensaje al hotel', status: 'todo', note: 'Dejar mochilas el viernes (check-in desde las 14:00), salida el martes a las 05:30 con la recepción cerrada (abre a las 08:00): preguntar cómo dejar la llave. Tasa turística. WhatsApp/teléfono: +39 351 247 3415.' },
+  { id: 'hotel', title: 'Hotel Soha Piazza di Spagna', status: 'bought', day: 1, time: '14:00', phone: '+39 351 247 3415', note: 'Reserva de Booking.com. Entrada desde las 14:00, salida de 08:00 a 11:00 del martes. Cancelación gratis hasta el 26 oct a las 23:59. Referencia y PIN: en Emergencias.' },
   { id: 'tse', title: 'Tarjeta Sanitaria Europea de los dos', status: 'todo' },
 ];

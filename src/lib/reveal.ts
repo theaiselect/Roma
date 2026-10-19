@@ -35,3 +35,21 @@ export function useAnswer(questionId: string): RevealState<AnswerEntity> & { ans
     answer: (text) => save({ id: `answer:${questionId}:${me}`, kind: 'answer', questionId, text, author: me }),
   };
 }
+
+/** Cuántas votaciones han respondido los dos (ya reveladas) y en cuántas habéis coincidido. */
+export function matchStats(votes: readonly { topic: string; choice: string | null; author: Who; locked?: unknown; deleted?: boolean }[]): { both: number; same: number } {
+  const byTopic = new Map<string, Map<string, string>>();
+  for (const v of votes) {
+    if (v.deleted || v.locked || v.choice === null || v.choice === undefined) continue;
+    const m = byTopic.get(v.topic) ?? new Map<string, string>();
+    m.set(v.author, v.choice);
+    byTopic.set(v.topic, m);
+  }
+  let both = 0, same = 0;
+  for (const m of byTopic.values()) {
+    if (m.size < 2) continue;
+    both++;
+    if (new Set(m.values()).size === 1) same++;
+  }
+  return { both, same };
+}

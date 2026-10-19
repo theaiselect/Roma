@@ -5,7 +5,8 @@ import { days, travellers } from '@/data/trip';
 import type { DayNum } from '@/data/types';
 import { DailyQuestionCard } from '@/screens/us-daily';
 import { appNow } from '@/lib/clock';
-import { useVote } from '@/lib/reveal';
+import { matchStats, useVote, type VoteEntity } from '@/lib/reveal';
+import { useKind } from '@/lib/db';
 import { romeParts } from '@/lib/time';
 
 /** Cenas con plan B (F17): cada uno vota y se revela cuando votan los dos. */
@@ -13,15 +14,16 @@ function dinnersOf(day: DayNum) {
   return itinerary.filter((s) => s.day === day && s.planB?.length && /cena/i.test(s.title));
 }
 
-function Choices({ topic, options, title }: { topic: string; options: { id: string; label: string }[]; title: string }) {
+function Choices({ topic, options, title, disabledNote }: { topic: string; options: { id: string; label: string }[]; title: string; disabledNote?: string }) {
   const { mine, theirs, other, revealed, vote } = useVote(topic);
   const label = (id: string | null | undefined) => options.find((o) => o.id === id)?.label ?? id ?? '';
   return (
     <section class="card stack" style={{ gap: '0.5rem' }}>
       <h3>{title}</h3>
+      {disabledNote && <p class="small muted">{disabledNote}</p>}
       <div class="stack" style={{ gap: '0.4rem' }}>
         {options.map((o) => (
-          <button type="button" key={o.id} class={`btn block${mine?.choice === o.id ? ' primary' : ''}`} style={{ justifyContent: 'flex-start' }} onClick={() => void vote(o.id)}>
+          <button type="button" key={o.id} class={`btn block${mine?.choice === o.id ? ' primary' : ''}`} style={{ justifyContent: 'flex-start' }} disabled={Boolean(disabledNote)} aria-pressed={mine?.choice === o.id} onClick={() => void vote(o.id)}>
             {mine?.choice === o.id ? '✓ ' : ''}{o.label}
           </button>
         ))}
@@ -52,14 +54,18 @@ export function DinnerVote({ day }: { day: DayNum }) {
 export function MomentVote({ day }: { day: DayNum }) {
   const date = days.find((d) => d.day === day)!.date;
   const options = itinerary.filter((s) => s.day === day && !s.leg).map((s) => ({ id: s.id, label: s.title }));
-  return <Choices topic={`moment-${date}`} title="El mejor momento del día" options={options} />;
+  // Solo se vota el mejor momento de un día que ya ha empezado.
+  const started = date <= romeParts(appNow()).date;
+  return <Choices topic={`moment-${date}`} title="El mejor momento del día" options={options} disabledNote={started ? undefined : 'Se vota cuando empiece este día.'} />;
 }
 
 export function Votes() {
   // Abre en el día del viaje en curso (o el primero si aún no ha empezado).
   const [day, setDay] = useState<DayNum>(() => days.find((d) => d.date === romeParts(appNow()).date)?.day ?? 1);
+  const { both, same } = matchStats(useKind<VoteEntity>('vote') ?? []);
   return (
     <section class="stack">
+      {both > 0 && <p class="card small" role="status">♥ Habéis coincidido en <b class="num">{same}</b> de <b class="num">{both}</b> votaciones.</p>}
       <div class="legend" role="group" aria-label="Día">
         {days.map((d) => <button type="button" key={d.day} aria-pressed={d.day === day} onClick={() => setDay(d.day)}>{d.roman}</button>)}
       </div>

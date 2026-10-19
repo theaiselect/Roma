@@ -3,6 +3,7 @@ import { useRegisterSW } from 'virtual:pwa-register/preact';
 import { Icon, type IconName } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
 import { LostButton } from '@/components/Lost';
+import { TicketViewer } from '@/components/TicketViewer';
 import { isSimulated, stopSimulation } from '@/lib/clock';
 import { useSettings } from '@/lib/settings';
 import { useSyncStatus } from '@/lib/sync-status';
@@ -86,6 +87,7 @@ function Shell({ needRefresh, updateServiceWorker }: { needRefresh: boolean; upd
       </main>
       <LostButton />
       <TabBar />
+      <TicketViewer />
       {needRefresh && (
         <div class="update" role="status">
           <span>Hay una versión nueva</span>

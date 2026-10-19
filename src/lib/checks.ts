@@ -2,7 +2,7 @@ import { save, useKind, type Entity } from '@/lib/db';
 import type { Who } from '@/data/types';
 
 // Casillas compartidas: una entidad por casilla (marcar dos distintas a la vez nunca choca).
-export type ListId = 'legs' | 'reservations' | 'monuments' | 'packing' | 'nightBefore' | 'gifts';
+export type ListId = 'legs' | 'reservations' | 'resnotes' | 'stops' | 'monuments' | 'packing' | 'nightBefore' | 'gifts';
 
 export interface CheckEntity extends Entity {
   kind: 'check';
