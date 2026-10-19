@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { RomaMap, type MapPin } from '@/components/RomaMap';
 import { Icon } from '@/components/Icon';
 import { PlaceFacts } from '@/components/StopCard';
@@ -6,13 +6,15 @@ import { placeById, places } from '@/data/places';
 import { days } from '@/data/trip';
 import type { DayNum, Place } from '@/data/types';
 import { useNow } from '@/lib/clock';
-import { useKind, type Entity } from '@/lib/db';
-import { distanceM, formatDistance, geoHelp, locate, walkingDistanceM, type LatLng } from '@/lib/geo';
+import { getMeta, setMeta, useKind, type Entity } from '@/lib/db';
+import { distanceM, formatDistance, geoHelp, locate, walkingDistanceM, watchPosition, type LatLng } from '@/lib/geo';
+import { ARRIVED_M, advance, bearing, distanceToStep, isOffRoute, remainingM, spoken } from '@/lib/nav';
+import { canSpeak, keepAwake, speak, stopSpeaking } from '@/lib/speech';
 import { directionsUrl, isIOS } from '@/lib/maps';
 import { useTimeline } from '@/lib/plan-state';
 import { romeParts } from '@/lib/time';
 import { downloadRoma, estimateMB, mapDownloadInfo, type MapDownload } from '@/lib/offline-map';
-import { cachedPois, footRoute, formatDuration, geocodeCached, nearest, refreshPois, searchPlaces, type Found, type Poi, type PoiKind, type Route } from '@/lib/osm';
+import { cachedPois, footRoute, footRouteVia, formatDuration, geocodeCached, nearest, refreshPois, reverseGeocode, searchPlaces, type Found, type Poi, type PoiKind, type Route } from '@/lib/osm';
 
 const DAY_COLOR: Record<DayNum, string> = { 1: 'var(--terracotta)', 2: 'var(--ocra)', 3: 'var(--pino)', 4: 'var(--vino)', 5: 'var(--tinta-suave)' };
 // Los mapas no entienden variables CSS: mismos colores en hexadecimal.
@@ -131,6 +133,15 @@ function OfflineMapCard() {
   );
 }
 
+const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+/** Sitios del plan que coinciden con lo escrito. Funcionan sin conexión. */
+function localMatches(q: string): Found[] {
+  const n = norm(q.trim());
+  if (n.length < 2) return [];
+  return places.filter((p) => p.lat !== undefined && p.lng !== undefined && norm(p.name).includes(n)).slice(0, 4)
+    .map((p) => ({ id: `local:${p.id}`, name: p.name, detail: 'En vuestro plan', lat: p.lat!, lng: p.lng! }));
+}
+
 type Picked = { kind: 'stop'; pin: Pin } | { kind: 'heart'; pin: Pin } | { kind: 'poi'; item: NearItem; filter: Filter } | { kind: 'found'; found: Found } | { kind: 'hotel' };
 
 export function MapScreen() {
@@ -153,6 +164,19 @@ export function MapScreen() {
   const [pois, setPois] = useState<Poi[]>([]);
   const [poiAge, setPoiAge] = useState<number | null>(null);
   const [hotel, setHotel] = useState<LatLng | null>(null);
+  const [heading, setHeading] = useState<number | null>(null);
+  const [navigating, setNavigating] = useState(false);
+  const [follow, setFollow] = useState(false);
+  const [stepIdx, setStepIdx] = useState(1);
+  const [dest, setDest] = useState<(LatLng & { name: string }) | null>(null);
+  const [voice, setVoice] = useState(false);
+  const [dayRoute, setDayRoute] = useState<Pin[] | null>(null);
+  const [arrived, setArrived] = useState<string | null>(null);
+  const [recent, setRecent] = useState<Found[]>([]);
+  const [focused, setFocused] = useState(false);
+  const lastFix = useRef<LatLng | null>(null);
+  const rerouteAt = useRef(0);
+  const typing = useRef(0);
   const [focus, setFocus] = useState<{ lat: number; lng: number; key: number } | null>(null);
   const memories = [...(useKind<Entity>('diary') ?? []), ...(useKind<Entity>('photo') ?? [])].filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number');
 
@@ -160,7 +184,41 @@ export function MapScreen() {
     void cachedPois().then((c) => { if (c) { setPois(c.pois); setPoiAge(c.at); } });
     void refreshPois().then((c) => { if (c) { setPois(c.pois); setPoiAge(c.at); } });
     void geocodeCached('hotel-soha', 'Via Zucchelli 32, Roma').then(setHotel);
+    void getMeta<Found[]>('map-recent').then((r) => { if (r) setRecent(r); });
   }, []);
+
+  // Navegación: sigue tu posición, mantiene la pantalla encendida y calcula el rumbo.
+  useEffect(() => {
+    if (!navigating) return;
+    let gone = false;
+    let release = () => {};
+    void keepAwake().then((r) => { if (gone) r(); else release = r; });
+    const stop = watchPosition((f) => {
+      setMe(f.pos);
+      setError(null);
+      const prev = lastFix.current;
+      let h = f.heading;
+      if (h === null && prev && distanceM(prev, f.pos) > 6) h = bearing(prev, f.pos);
+      if (!prev || distanceM(prev, f.pos) > 6) lastFix.current = f.pos;
+      if (h !== null) setHeading(h);
+    }, (r) => {
+      // Un fallo suelto del GPS (calle estrecha, túnel) no corta la navegación: solo si niegas el permiso.
+      if (r === 'denied' || r === 'unsupported') { setError(geoHelp(r, isIOS())); stopNav(); } else setError('Buscando señal de GPS…');
+    });
+    return () => { gone = true; stop(); release(); };
+  }, [navigating]);
+
+  // Cada vez que te mueves: ¿has llegado?, ¿toca la siguiente indicación?, ¿te has desviado?
+  useEffect(() => {
+    if (!navigating || !route || !me || !dest) return;
+    if (distanceM(me, dest) < ARRIVED_M) { setArrived(dest.name); if (voice) speak('Has llegado'); stopNav(); return; }
+    const i = advance(me, route.steps, stepIdx);
+    if (i !== stepIdx) { setStepIdx(i); if (voice) speak(spoken(route.steps, i)); }
+    if (isOffRoute(me, route.coords) && Date.now() - rerouteAt.current > 15_000) {
+      rerouteAt.current = Date.now();
+      void footRoute(me, dest).then((r) => { if (r) { setRoute(r); setStepIdx(1); if (voice) speak('Recalculando la ruta'); } });
+    }
+  }, [me?.lat, me?.lng, navigating]);
 
   const stopPins = useMemo(() => {
     const out: Pin[] = [];
@@ -192,7 +250,7 @@ export function MapScreen() {
   const onPick = (id: string) => {
     const [k, ...rest] = id.split(':');
     const key = rest.join(':');
-    setRoute(null);
+    clearRoute();
     if (k === 'stop') { const pin = stopPins.find((p) => p.id === key); if (pin) setPicked({ kind: 'stop', pin }); }
     else if (k === 'heart') { const pin = heartPins.find((p) => p.id === key); if (pin) setPicked({ kind: 'heart', pin }); }
     else if (k === 'poi') { const item = near.find((n) => n.id === key); if (item) setPicked({ kind: 'poi', item, filter }); }
@@ -213,24 +271,62 @@ export function MapScreen() {
     return hotel ? { ...hotel, name: 'Hotel Soha', place: placeById.get('hotel-soha') } : null;
   };
 
-  const walkTo = async (t: LatLng) => {
-    const origin = me ?? (hotel && !me ? hotel : null);
+  const stopNav = () => { setNavigating(false); setFollow(false); stopSpeaking(); };
+  const clearRoute = () => { setRoute(null); setDest(null); setDayRoute(null); setArrived(null); stopNav(); };
+
+  const walkTo = async (t: LatLng & { name: string }) => {
+    const origin = me ?? hotel;
     if (!origin) { setError('Pulsa «Dónde estoy» para trazar la ruta desde donde estás.'); return; }
     setRouting('Calculando…');
     const r = await footRoute(origin, t);
     setRouting(null);
-    if (r) { setRoute(r); setError(null); } else setError(online ? 'No se ha podido calcular la ruta. Usa «Cómo llegar» para abrirla en el mapa del móvil.' : 'La ruta necesita conexión. Usa «Cómo llegar» cuando tengas datos.');
+    if (r) { setRoute(r); setDest(t); setDayRoute(null); setArrived(null); setError(null); window.scrollTo({ top: 0, behavior: 'smooth' }); } else setError(online ? 'No se ha podido calcular la ruta. Usa «Abrir en Google Maps» para verla en el mapa del móvil.' : 'La ruta necesita conexión. Usa «Abrir en Google Maps» cuando tengas datos.');
   };
 
-  const search = async (text: string) => {
+  /** Ruta que une todas las paradas del día, en orden, con el tiempo de cada tramo. */
+  const planDay = async () => {
+    if (stopPins.length < 2) return;
+    setRouting('day');
+    const r = await footRouteVia(stopPins.map((p) => ({ lat: p.lat, lng: p.lng })));
+    setRouting(null);
+    if (r) { setRoute(r); setDest(null); setDayRoute(stopPins); setPicked(null); stopNav(); setError(null); } else setError(online ? 'No se ha podido calcular la ruta del día.' : 'La ruta del día necesita conexión.');
+  };
+
+  const startNav = () => {
+    if (!route || !dest) return;
+    setArrived(null); setStepIdx(1); setFollow(true); setNavigating(true); lastFix.current = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (voice) speak(spoken(route.steps, 1));
+  };
+
+  const longPress = async (p: LatLng) => {
+    clearRoute();
+    const id = `pt${Date.now()}`;
+    setPicked({ kind: 'found', found: { id, name: 'Punto marcado', detail: `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`, ...p } });
+    const f = await reverseGeocode(p);
+    if (f) setPicked((cur) => (cur?.kind === 'found' && cur.found.id === id ? { kind: 'found', found: { ...f, id } } : cur));
+  };
+
+  const search = (text: string) => {
     setQ(text);
-    if (text.trim().length < 3) { setResults(null); return; }
-    setResults(await searchPlaces(text));
+    window.clearTimeout(typing.current);
+    const local = localMatches(text);
+    if (text.trim().length < 2) { setResults(null); return; }
+    setResults(local);
+    if (text.trim().length < 3) return;
+    typing.current = window.setTimeout(async () => {
+      const far = await searchPlaces(text);
+      const extra = (far ?? []).filter((f) => !local.some((l) => distanceM(l, f) < 40));
+      setResults([...local, ...extra]);
+    }, 280);
   };
   const chooseFound = (f: Found) => {
-    setResults(null); setQ(f.name); setRoute(null);
+    setResults(null); setQ(f.name); setFocused(false); clearRoute();
     setPicked({ kind: 'found', found: f });
     setFocus({ lat: f.lat, lng: f.lng, key: Date.now() });
+    const next = [f, ...recent.filter((r) => r.id !== f.id)].slice(0, 5);
+    setRecent(next);
+    void setMeta('map-recent', next);
   };
 
   const t = picked ? target(picked) : null;
@@ -240,34 +336,84 @@ export function MapScreen() {
     <div class="stack-lg">
       <div class="page-title"><h1>Mapa</h1></div>
       <div class="searchbox">
-        <input type="search" value={q} placeholder="Buscar un sitio en Roma" aria-label="Buscar un sitio" onInput={(e) => void search((e.target as HTMLInputElement).value)} />
+        <input type="search" value={q} placeholder="Buscar un sitio en Roma" aria-label="Buscar un sitio" onInput={(e) => search((e.target as HTMLInputElement).value)}
+          onFocus={() => setFocused(true)} onBlur={() => window.setTimeout(() => setFocused(false), 180)} />
         {results && (
           <ul class="results" role="listbox">
             {results.length === 0 && <li class="small muted" style={{ padding: '0.6rem 0.8rem' }}>{online ? 'Sin resultados.' : 'El buscador necesita conexión.'}</li>}
             {results.map((f) => <li key={f.id}><button type="button" role="option" onClick={() => chooseFound(f)}><b>{f.name}</b><span class="small muted">{f.detail}</span></button></li>)}
           </ul>
         )}
+        {!results && focused && !q && recent.length > 0 && (
+          <ul class="results">
+            <li class="small muted" style={{ padding: '0.4rem 0.8rem 0' }}>Búsquedas recientes</li>
+            {recent.map((f) => <li key={f.id}><button type="button" onClick={() => chooseFound(f)}><b>{f.name}</b><span class="small muted">{f.detail}</span></button></li>)}
+          </ul>
+        )}
       </div>
       <div class="legend" role="group" aria-label="Día">
-        <button type="button" aria-pressed={day === 0} onClick={() => { setDay(0); setRoute(null); }}>Todos</button>
-        {days.map((d) => <button type="button" key={d.day} aria-pressed={day === d.day} onClick={() => { setDay(d.day); setRoute(null); }}><i style={{ background: DAY_COLOR[d.day] }} />{d.roman}</button>)}
+        <button type="button" aria-pressed={day === 0} onClick={() => { setDay(0); clearRoute(); }}>Todos</button>
+        {days.map((d) => <button type="button" key={d.day} aria-pressed={day === d.day} onClick={() => { setDay(d.day); clearRoute(); }}><i style={{ background: DAY_COLOR[d.day] }} />{d.roman}</button>)}
       </div>
+      {day !== 0 && stopPins.length > 1 && !fallback && (
+        <button type="button" class="btn" disabled={!!routing} onClick={() => void planDay()}><Icon name="walk" /> {routing === 'day' ? 'Calculando…' : 'Ruta a pie del día'}</button>
+      )}
       {fallback ? (
         <>
           <div class="alert"><Icon name="alert" /><span>No se ha podido cargar el mapa{online ? '' : ' (sin conexión y sin Roma descargada)'}. Mientras tanto, esquema de las paradas.</span></div>
           <Schematic pins={pins} me={me} onPick={(p) => setPicked(p.heart ? { kind: 'heart', pin: p } : { kind: 'stop', pin: p })} labels={day !== 0} />
         </>
       ) : (
-        <div class="mapwrap">
-          <RomaMap pins={mapPins} me={me} route={route} fitKey={`${day}|${nearOnMap ? filter : ''}`} focus={focus} onPick={onPick} onFail={() => setFallback(true)} />
+        <div class={`mapwrap${navigating ? ' navmode' : ''}`}>
+          <RomaMap pins={mapPins} me={me} route={route} fitKey={`${day}|${nearOnMap ? filter : ''}`} focus={focus} heading={heading} follow={follow} onPick={onPick} onLongPress={(p) => void longPress(p)} onUserMove={() => setFollow(false)} onFail={() => setFallback(true)} />
+          {navigating && route && me && route.steps[stepIdx] && (() => {
+            const st = route.steps[stepIdx]!;
+            const rest = remainingM(me, route.steps, stepIdx);
+            return (
+              <div class="navbanner" role="status" aria-live="polite">
+                <div class="navmain"><b class="navtext">{st.text}</b><span class="navdist num">{formatDistance(distanceToStep(me, st))}</span></div>
+                <div class="row spread">
+                  <span class="small num">{formatDuration(rest / 1.25)} · {formatDistance(rest)} para llegar</span>
+                  <span class="row" style={{ gap: '0.35rem' }}>
+                    {canSpeak() && <button type="button" class="btn ghost" aria-pressed={voice} onClick={() => setVoice((v) => { if (v) stopSpeaking(); return !v; })}>{voice ? 'Voz activada' : 'Voz'}</button>}
+                    <button type="button" class="btn ghost" onClick={stopNav}>Salir</button>
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+          {navigating && !follow && <button type="button" class="btn locate recenter" onClick={() => setFollow(true)}><Icon name="walk" /> Recentrar</button>}
           <button type="button" class="btn locate" onClick={() => void doLocate()} disabled={locating} aria-label="Dónde estoy"><Icon name="pin" /> {locating ? '…' : me ? 'Actualizar' : 'Dónde estoy'}</button>
         </div>
       )}
       {error && <div class="alert"><Icon name="alert" /><span>{error}</span></div>}
-      {route && <div class="card row spread" role="status"><span><b class="num">{formatDuration(route.durationS)}</b> a pie · <span class="num">{formatDistance(route.distanceM)}</span> <span class="small muted">{originLabel}</span></span><button type="button" class="btn ghost" onClick={() => setRoute(null)}>Quitar ruta</button></div>}
+      {arrived && <div class="card row spread" role="status"><span><b>Has llegado</b> a {arrived}.</span><button type="button" class="btn ghost" onClick={() => { setArrived(null); clearRoute(); }}>Cerrar</button></div>}
+      {route && (
+        <section class="card stack" role="status" style={{ gap: '0.5rem' }}>
+          <div class="row spread">
+            <span><b class="num">{formatDuration(route.durationS)}</b> a pie · <span class="num">{formatDistance(route.distanceM)}</span>{dayRoute ? <span class="small muted"> · {dayRoute.length} paradas</span> : <span class="small muted"> {originLabel}</span>}</span>
+            <button type="button" class="btn ghost" onClick={clearRoute}>Quitar ruta</button>
+          </div>
+          {dest && !navigating && <button type="button" class="btn primary" onClick={startNav}><Icon name="walk" /> Empezar a caminar</button>}
+          {dayRoute && (
+            <ol class="legs">
+              {dayRoute.slice(0, -1).map((p, i) => (
+                <li key={p.id}><span>{p.short} {p.place?.name ?? p.label}</span><span class="small muted num">→ {route.legs[i] ? `${formatDuration(route.legs[i]!.durationS)} · ${formatDistance(route.legs[i]!.distanceM)}` : ''}</span></li>
+              ))}
+              <li><span>{dayRoute[dayRoute.length - 1]!.short} {dayRoute[dayRoute.length - 1]!.place?.name ?? dayRoute[dayRoute.length - 1]!.label}</span></li>
+            </ol>
+          )}
+          {!dayRoute && route.steps.length > 1 && (
+            <details>
+              <summary>Ver las {route.steps.length} indicaciones</summary>
+              <ol class="steps">{route.steps.map((st, i) => <li key={i}>{st.text}{st.distanceM >= 10 && i < route.steps.length - 1 ? <span class="small muted num"> · {formatDistance(st.distanceM)}</span> : null}</li>)}</ol>
+            </details>
+          )}
+        </section>
+      )}
       {picked && (
         <section class="card current stack" style={{ gap: '0.35rem' }}>
-          <div class="spread"><b>{picked.kind === 'stop' || picked.kind === 'heart' ? picked.pin.label : picked.kind === 'poi' ? picked.item.name : picked.kind === 'found' ? picked.found.name : 'Hotel Soha Piazza di Spagna'}</b><button type="button" class="btn ghost" onClick={() => { setPicked(null); setRoute(null); }}>Cerrar</button></div>
+          <div class="spread"><b>{picked.kind === 'stop' || picked.kind === 'heart' ? picked.pin.label : picked.kind === 'poi' ? picked.item.name : picked.kind === 'found' ? picked.found.name : 'Hotel Soha Piazza di Spagna'}</b><button type="button" class="btn ghost" onClick={() => { setPicked(null); clearRoute(); }}>Cerrar</button></div>
           {picked.kind === 'found' && picked.found.detail && <p class="small muted">{picked.found.detail}</p>}
           {picked.kind === 'poi' && picked.item.extra && <p class="small muted">{picked.item.extra}</p>}
           {picked.kind === 'poi' && picked.item.poi && <p class="small muted">Dato de OpenStreetMap.</p>}
@@ -275,7 +421,7 @@ export function MapScreen() {
           {t && <p class="small muted">{me ? `A ${formatDistance(distanceM(me, t) * 1.3)} a pie.` : ''}</p>}
           {t && (
             <div class="stop-actions">
-              <button type="button" class="btn primary" disabled={!!routing} onClick={() => void walkTo(t)}><Icon name="walk" /> {routing ?? 'Ruta a pie'}</button>
+              <button type="button" class="btn primary" disabled={!!routing} onClick={() => void walkTo(t)}><Icon name="walk" /> {routing ? 'Calculando…' : 'Ruta a pie'}</button>
               <a class="btn" href={directionsUrl({ name: t.name, lat: t.lat, lng: t.lng })} target="_blank" rel="noopener"><Icon name="pin" /> Abrir en {isIOS() ? 'Apple Maps' : 'Google Maps'}</a>
               {t.place?.phone && <a class="btn" href={`tel:${t.place.phone.replace(/[^\d+]/g, '')}`}><Icon name="phone" /> Llamar</a>}
             </div>

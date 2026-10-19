@@ -57,3 +57,19 @@ export function geoHelp(reason: Exclude<GeoResult, { ok: true }>['reason'], ios:
   if (reason === 'timeout' || reason === 'unavailable') return 'No se ha podido saber dónde estás. Prueba al aire libre o activa la ubicación del móvil.';
   return 'Este navegador no permite saber la ubicación.';
 }
+
+export interface Fix { pos: LatLng; accuracy: number; heading: number | null }
+
+/** Sigue la posición mientras `onFix` esté activo. Devuelve cómo pararlo. El rumbo solo es fiable andando. */
+export function watchPosition(onFix: (f: Fix) => void, onError: (reason: 'denied' | 'unavailable' | 'unsupported') => void): () => void {
+  if (!('geolocation' in navigator)) { onError('unsupported'); return () => {}; }
+  const id = navigator.geolocation.watchPosition(
+    (p) => onFix({
+      pos: { lat: p.coords.latitude, lng: p.coords.longitude }, accuracy: p.coords.accuracy,
+      heading: typeof p.coords.heading === 'number' && !Number.isNaN(p.coords.heading) && (p.coords.speed ?? 0) > 0.4 ? p.coords.heading : null,
+    }),
+    (e) => onError(e.code === 1 ? 'denied' : 'unavailable'),
+    { enableHighAccuracy: true, maximumAge: 2_000, timeout: 20_000 },
+  );
+  return () => navigator.geolocation.clearWatch(id);
+}

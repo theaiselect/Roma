@@ -13,7 +13,13 @@ interface Props {
   /** Cambia cuando hay que reencuadrar (otro día, otro filtro). */
   fitKey: string;
   focus: { lat: number; lng: number; key: number } | null;
+  /** Rumbo en grados (si el móvil lo da) y modo seguimiento: la cámara te sigue, inclinada y girada hacia donde miras. */
+  heading: number | null;
+  follow: boolean;
   onPick: (id: string) => void;
+  onLongPress: (p: LatLng) => void;
+  /** El usuario movió el mapa con el dedo: sale del modo seguimiento. */
+  onUserMove: () => void;
   onFail: () => void;
 }
 
@@ -38,6 +44,19 @@ function heartImage(color: string): ImageData {
   return g.getImageData(0, 0, 64, 64);
 }
 
+function arrowImage(): ImageData {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#4A7FA8';
+  g.strokeStyle = '#fff';
+  g.lineWidth = 4;
+  g.beginPath();
+  g.moveTo(32, 2); g.lineTo(46, 22); g.lineTo(18, 22); g.closePath();
+  g.stroke(); g.fill();
+  return g.getImageData(0, 0, 64, 64);
+}
+
 function webgl(): boolean {
   try {
     const c = document.createElement('canvas');
@@ -48,14 +67,18 @@ function webgl(): boolean {
 }
 
 /** Mapa vectorial interactivo (OpenFreeMap). Se carga bajo demanda: MapLibre pesa ~250 KB comprimido. */
-export function RomaMap({ pins, me, route, fitKey, focus, onPick, onFail }: Props) {
+export function RomaMap({ pins, me, route, fitKey, focus, heading, follow, onPick, onLongPress, onUserMove, onFail }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const ready = useRef(false);
-  const latest = useRef({ pins, me, route, fitKey });
-  latest.current = { pins, me, route, fitKey };
+  const latest = useRef({ pins, me, route, fitKey, heading });
+  latest.current = { pins, me, route, fitKey, heading };
   const pick = useRef(onPick);
   pick.current = onPick;
+  const cb = useRef({ onLongPress, onUserMove });
+  cb.current = { onLongPress, onUserMove };
+  const following = useRef(follow);
+  following.current = follow;
 
   const paint = () => {
     const m = map.current;
@@ -65,7 +88,7 @@ export function RomaMap({ pins, me, route, fitKey, focus, onPick, onFail }: Prop
       type: 'FeatureCollection',
       features: ps.map((p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] }, properties: { id: p.id, kind: p.kind, color: p.color, short: p.short } })),
     });
-    (m.getSource('me') as GeoJSONSource).setData(pos ? { type: 'Feature', geometry: { type: 'Point', coordinates: [pos.lng, pos.lat] }, properties: {} } : empty);
+    (m.getSource('me') as GeoJSONSource).setData(pos ? { type: 'Feature', geometry: { type: 'Point', coordinates: [pos.lng, pos.lat] }, properties: { heading: latest.current.heading ?? -1 } } : empty);
     (m.getSource('route') as GeoJSONSource).setData(r ? { type: 'Feature', geometry: { type: 'LineString', coordinates: r.coords }, properties: {} } : empty);
   };
 
@@ -91,7 +114,7 @@ export function RomaMap({ pins, me, route, fitKey, focus, onPick, onFail }: Prop
       const m = new lib.Map({ container: box.current, style: STYLE_URL, center: [ROME_CENTER.lng, ROME_CENTER.lat], zoom: 13, attributionControl: { compact: true }, cooperativeGestures: false });
       map.current = m;
       if (import.meta.env.DEV || location.search.includes('e2e')) (window as unknown as { __romaMap?: MlMap }).__romaMap = m; // para las pruebas e2e
-      m.addControl(new lib.NavigationControl({ showCompass: false }), 'top-right');
+      m.addControl(new lib.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right');
       timer = window.setTimeout(() => { if (!ready.current) onFail(); }, 15_000);
       m.on('error', (e) => {
         // Sin red y sin mapa descargado: el estilo no llega y volvemos al esquema.
@@ -101,6 +124,7 @@ export function RomaMap({ pins, me, route, fitKey, focus, onPick, onFail }: Prop
         ready.current = true;
         window.clearTimeout(timer);
         m.addImage('heart', heartImage('#C0583A'), { pixelRatio: 2 });
+        m.addImage('arrow', arrowImage(), { pixelRatio: 2 });
         m.addSource('route', { type: 'geojson', data: empty });
         m.addSource('pins', { type: 'geojson', data: empty });
         m.addSource('me', { type: 'geojson', data: empty });
@@ -114,6 +138,20 @@ export function RomaMap({ pins, me, route, fitKey, focus, onPick, onFail }: Prop
           paint: { 'text-color': '#fff' } });
         m.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-color': '#4A7FA8', 'circle-opacity': 0.22, 'circle-radius': 20 } });
         m.addLayer({ id: 'me-dot', type: 'circle', source: 'me', paint: { 'circle-color': '#4A7FA8', 'circle-radius': 8, 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } });
+        // Flecha de rumbo sobre el punto azul: gira con la dirección en la que caminas.
+        m.addLayer({ id: 'me-arrow', type: 'symbol', source: 'me', filter: ['>=', ['get', 'heading'], 0],
+          layout: { 'icon-image': 'arrow', 'icon-size': 0.5, 'icon-rotate': ['get', 'heading'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map', 'icon-offset': [0, -22], 'icon-allow-overlap': true } });
+        // Pulsación larga (o botón derecho) = marcar un punto cualquiera.
+        let press = 0;
+        const cancel = () => window.clearTimeout(press);
+        m.on('touchstart', (e) => {
+          if (e.points && e.points.length > 1) return;
+          cancel();
+          press = window.setTimeout(() => { navigator.vibrate?.(20); cb.current.onLongPress({ lat: e.lngLat.lat, lng: e.lngLat.lng }); }, 550);
+        });
+        for (const ev of ['touchend', 'touchmove', 'touchcancel', 'zoomstart', 'rotatestart', 'pitchstart'] as const) m.on(ev, cancel);
+        m.on('contextmenu', (e) => cb.current.onLongPress({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
+        m.on('dragstart', (e) => { if ((e as unknown as { originalEvent?: unknown }).originalEvent && following.current) cb.current.onUserMove(); });
         for (const id of ['pins-circle', 'pins-hearts']) {
           m.on('click', id, (e) => { const f = e.features?.[0]; if (f) pick.current(String(f.properties.id)); });
           m.on('mouseenter', id, () => { m.getCanvas().style.cursor = 'pointer'; });
@@ -133,7 +171,14 @@ export function RomaMap({ pins, me, route, fitKey, focus, onPick, onFail }: Prop
   }, []);
 
   useEffect(paint, [pins, me, route]);
-  useEffect(() => { if (map.current && ready.current) fit(map.current); }, [fitKey, route]);
+  useEffect(() => { if (map.current && ready.current && !follow) fit(map.current); }, [fitKey, route]);
+  // Seguimiento: la cámara va contigo, inclinada y mirando hacia donde caminas. Al salir, vuelve a plano y al norte.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready.current) return;
+    if (follow && me) m.easeTo({ center: [me.lng, me.lat], zoom: Math.max(m.getZoom(), 17), pitch: 55, bearing: heading ?? m.getBearing(), duration: 700, essential: true });
+    else if (!follow && m.getPitch() > 0) m.easeTo({ pitch: 0, bearing: 0, duration: 500 });
+  }, [follow, me?.lat, me?.lng, heading]);
   useEffect(() => { if (focus && map.current && ready.current) map.current.flyTo({ center: [focus.lng, focus.lat], zoom: Math.max(map.current.getZoom(), 16), duration: 700 }); }, [focus?.key]);
 
   return <div ref={box} class="romamap" role="application" aria-label="Mapa de Roma" />;

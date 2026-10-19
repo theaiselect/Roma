@@ -124,7 +124,7 @@ describe('mapa sin conexión: teselas y datos libres', async () => {
     expect(extraUrls(style)).toContain('https://t/sprites/a/ofm@2x.png');
   });
   it('lee la ruta de OSRM, el buscador Photon y los puntos de Overpass', () => {
-    expect(parseOsrm({ code: 'Ok', routes: [{ distance: 1234, duration: 900, geometry: { coordinates: [[1, 2]] } }] })).toEqual({ distanceM: 1234, durationS: 900, coords: [[1, 2]] });
+    expect(parseOsrm({ code: 'Ok', routes: [{ distance: 1234, duration: 900, geometry: { coordinates: [[1, 2]] } }] })).toMatchObject({ distanceM: 1234, durationS: 900, coords: [[1, 2]], steps: [], legs: [] });
     expect(parseOsrm({ code: 'NoRoute' })).toBeNull();
     expect(parsePhoton({ features: [{ geometry: { coordinates: [12.47, 41.89] }, properties: { name: 'Pantheon', street: 'Piazza della Rotonda', city: 'Roma' } }, { geometry: { coordinates: [0, 0] }, properties: {} }] })).toMatchObject([{ name: 'Pantheon', lat: 41.89, lng: 12.47 }]);
     const pois = parseOverpass({ elements: [
@@ -136,5 +136,38 @@ describe('mapa sin conexión: teselas y datos libres', async () => {
     expect(overpassQuery()).toContain('amenity=drinking_water');
     expect(formatDuration(900)).toBe('15 min');
     expect(formatDuration(4000)).toBe('1 h 7 min');
+  });
+});
+
+describe('navegación a pie (nav.ts)', async () => {
+  const { instruction, parseSteps, distToLineM, advance, isOffRoute, bearing } = await import('@/lib/nav');
+  it('instrucciones en español', () => {
+    expect(instruction({ type: 'turn', modifier: 'left', location: [0, 0] }, 'Via del Corso')).toBe('Gira a la izquierda por Via del Corso');
+    expect(instruction({ type: 'turn', modifier: 'slight right', location: [0, 0] })).toBe('Gira ligeramente a la derecha');
+    expect(instruction({ type: 'roundabout', exit: 2, location: [0, 0] })).toBe('En la rotonda, toma la salida 2');
+    expect(instruction({ type: 'arrive', modifier: 'right', location: [0, 0] })).toBe('Has llegado: el destino queda a tu derecha');
+    expect(instruction({ type: 'depart', location: [0, 0] }, 'Via Zucchelli')).toBe('Empieza por Via Zucchelli');
+  });
+  it('aplana los tramos', () => {
+    const s = parseSteps([{ steps: [{ distance: 100, maneuver: { type: 'depart', location: [12.5, 41.9] } }] }, { steps: [{ distance: 0, maneuver: { type: 'arrive', location: [12.51, 41.9] } }] }]);
+    expect(s.map((x) => x.type)).toEqual(['depart', 'arrive']);
+  });
+  it('distancia a la ruta y desvío', () => {
+    const line: [number, number][] = [[12.5, 41.9], [12.51, 41.9]];
+    expect(distToLineM({ lat: 41.9, lng: 12.505 }, line)).toBeLessThan(1);
+    const d = distToLineM({ lat: 41.9 + 100 / 111_195, lng: 12.505 }, line);
+    expect(d).toBeGreaterThan(95); expect(d).toBeLessThan(105);
+    expect(isOffRoute({ lat: 41.9 + 100 / 111_195, lng: 12.505 }, line)).toBe(true);
+    expect(isOffRoute({ lat: 41.9 + 20 / 111_195, lng: 12.505 }, line)).toBe(false);
+  });
+  it('avanza al llegar a una maniobra y nunca pasa del final', () => {
+    const steps = [0, 1, 2, 3].map((i) => ({ text: '', type: i === 3 ? 'arrive' : 'turn', at: [12.5 + i * 0.001, 41.9] as [number, number], distanceM: 80 }));
+    expect(advance({ lat: 41.9, lng: 12.5 }, steps, 1)).toBe(1);
+    expect(advance({ lat: 41.9, lng: 12.501 }, steps, 1)).toBe(2);
+    expect(advance({ lat: 41.9, lng: 12.502 }, steps, 1)).toBe(3);
+  });
+  it('rumbo: este = 90°, norte = 0°', () => {
+    expect(Math.round(bearing({ lat: 41.9, lng: 12.5 }, { lat: 41.9, lng: 12.6 }))).toBe(90);
+    expect(Math.round(bearing({ lat: 41.9, lng: 12.5 }, { lat: 42, lng: 12.5 }))).toBe(0);
   });
 });

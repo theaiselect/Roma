@@ -4,6 +4,7 @@
 // Todo falla con elegancia: sin red, la app sigue con lo guardado y con los enlaces a Google/Apple Maps.
 import { getMeta, setMeta } from '@/lib/db';
 import { distanceM, type LatLng } from '@/lib/geo';
+import { parseSteps, type OsrmStep, type Step } from '@/lib/nav';
 
 export const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 /** Centro histórico y alrededores del hotel, Vaticano, Trastevere, Coliseo y Villa Borghese. */
@@ -26,19 +27,32 @@ async function getJson<T>(url: string, init?: RequestInit, timeoutMs = 9000): Pr
 }
 
 // ── Ruta a pie ──────────────────────────────────────────────────
-export interface Route { distanceM: number; durationS: number; coords: [number, number][] }
+export interface Leg { distanceM: number; durationS: number }
+export interface Route { distanceM: number; durationS: number; coords: [number, number][]; steps: Step[]; legs: Leg[] }
 
-interface OsrmResponse { code: string; routes?: { distance: number; duration: number; geometry: { coordinates: [number, number][] } }[] }
+interface OsrmResponse {
+  code: string;
+  routes?: { distance: number; duration: number; geometry: { coordinates: [number, number][] }; legs?: { distance?: number; duration?: number; steps?: OsrmStep[] }[] }[];
+}
 
 export function parseOsrm(r: OsrmResponse | null): Route | null {
   const x = r?.code === 'Ok' ? r.routes?.[0] : undefined;
-  return x ? { distanceM: x.distance, durationS: x.duration, coords: x.geometry.coordinates } : null;
+  if (!x) return null;
+  return {
+    distanceM: x.distance, durationS: x.duration, coords: x.geometry.coordinates,
+    steps: parseSteps(x.legs), legs: (x.legs ?? []).map((l) => ({ distanceM: l.distance ?? 0, durationS: l.duration ?? 0 })),
+  };
 }
 
-export async function footRoute(from: LatLng, to: LatLng): Promise<Route | null> {
-  const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
-  return parseOsrm(await getJson<OsrmResponse>(url));
+/** Ruta a pie por varios puntos, en orden (sirve para «la ruta del día»). Con un solo tramo es la ruta de siempre. */
+export async function footRouteVia(points: LatLng[]): Promise<Route | null> {
+  if (points.length < 2) return null;
+  const path = points.map((p) => `${p.lng},${p.lat}`).join(';');
+  const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${path}?overview=full&geometries=geojson&steps=true`;
+  return parseOsrm(await getJson<OsrmResponse>(url, undefined, 12_000));
 }
+
+export const footRoute = (from: LatLng, to: LatLng): Promise<Route | null> => footRouteVia([from, to]);
 
 // ── Buscador ────────────────────────────────────────────────────
 export interface Found { id: string; name: string; detail: string; lat: number; lng: number }
@@ -62,6 +76,13 @@ export async function searchPlaces(q: string): Promise<Found[] | null> {
   const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lat=${ROME_CENTER.lat}&lon=${ROME_CENTER.lng}&bbox=${b.west - 0.15},${b.south - 0.1},${b.east + 0.15},${b.north + 0.1}`;
   const r = await getJson<PhotonResponse>(url);
   return r ? parsePhoton(r) : null;
+}
+
+/** Qué hay en un punto del mapa (pulsación larga). */
+export async function reverseGeocode(p: LatLng): Promise<Found | null> {
+  const r = await getJson<PhotonResponse>(`https://photon.komoot.io/api/reverse?lat=${p.lat}&lon=${p.lng}&limit=1`);
+  const f = r ? parsePhoton(r)[0] : undefined;
+  return f ? { ...f, lat: p.lat, lng: p.lng } : null;
 }
 
 // ── Puntos de interés (Overpass) ────────────────────────────────
