@@ -22,8 +22,8 @@ export default defineConfig({
         globIgnores: ['**/map/roma.pmtiles'],
       },
       manifest: {
-        name: 'Amor · Roma',
-        short_name: 'Amor',
+        name: 'Roma',
+        short_name: 'Roma',
         lang: 'es',
         display: 'standalone',
         start_url: '/?source=pwa',

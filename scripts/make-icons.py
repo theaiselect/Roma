@@ -15,7 +15,7 @@ def icon(size: int, safe: float) -> Image.Image:
     d = ImageDraw.Draw(img)
     inner = s * safe
     font = ImageFont.truetype(str(font_path), int(inner * 0.34))
-    text = 'AMOR'
+    text = 'ROMA'
     box = d.textbbox((0, 0), text, font=font)
     tw, th = box[2] - box[0], box[3] - box[1]
     x = (s - tw) / 2 - box[0]
@@ -32,7 +32,7 @@ def icon(size: int, safe: float) -> Image.Image:
     d.ellipse([cx - 2 * r, cy - r, cx, cy + r], fill=MARMOL)
     d.ellipse([cx, cy - r, cx + 2 * r, cy + r], fill=MARMOL)
     d.polygon([(cx - 2 * r + r * 0.15, cy + r * 0.35), (cx + 2 * r - r * 0.15, cy + r * 0.35), (cx, cy + r * 2.4)], fill=MARMOL)
-    return img.resize((size, size), Image.LANCZOS)
+    return img.resize((size, size), Image.LANCZOS).quantize(colors=12, method=Image.Quantize.MEDIANCUT)
 
 icon(192, 0.86).save(out / 'icon-192.png', optimize=True)
 icon(512, 0.86).save(out / 'icon-512.png', optimize=True)
