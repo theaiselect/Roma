@@ -22,6 +22,7 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: false,
       injectManifest: {
+        rollupFormat: 'iife', // se registra como script clásico: un módulo ES haría fallar el registro
         // roma.pmtiles NO va en el precaché (pesa ~25 MB): tiene su propia caché.
         globPatterns: ['**/*.{js,css,html,woff2,svg,png,webmanifest,json,pbf}'],
         globIgnores: ['**/map/roma.pmtiles'],

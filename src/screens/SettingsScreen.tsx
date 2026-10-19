@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { travellers } from '@/data/trip';
 import type { Who } from '@/data/types';
 import { BackTitle } from '@/screens/More';
-import { offlineReady } from '@/screens/Onboarding';
+import { InstallCard, offlineReady } from '@/screens/Onboarding';
 import { getMeta, outboxSize, wipeLocal } from '@/lib/db';
 import { resetLocalSettings, updateSettings, useSettings } from '@/lib/settings';
 import { requestSync, syncDisabledReason } from '@/lib/sync';
@@ -78,6 +78,7 @@ export function SettingsScreen() {
       </section>
       <section class="card stack">
         <h2>Estado</h2>
+        <InstallCard />
         <Status />
       </section>
       <section class="card stack">

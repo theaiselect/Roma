@@ -73,6 +73,28 @@ function ProfileStep({ onPick }: { onPick: (w: Who) => void }) {
   );
 }
 
+/** Instalación en cualquier momento (Ajustes): botón nativo si Chrome lo ofrece, o instrucciones. */
+export function InstallCard() {
+  const ios = isIOS();
+  const [canPrompt, setCanPrompt] = useState(!!deferredPrompt);
+  useEffect(() => {
+    const on = () => setCanPrompt(true);
+    window.addEventListener('beforeinstallprompt', on);
+    return () => window.removeEventListener('beforeinstallprompt', on);
+  }, []);
+  if (isStandalone()) return <section class="card stack"><h2>Instalada</h2><p class="small muted">Estás usando Roma desde el icono de la pantalla de inicio.</p></section>;
+  return (
+    <section class="card stack">
+      <h2>Instalar Roma</h2>
+      {ios
+        ? <p>En Safari: <b>Compartir</b> → <b>Añadir a pantalla de inicio</b>.</p>
+        : canPrompt
+          ? <button type="button" class="btn primary block" onClick={() => void deferredPrompt?.prompt()}>Instalar aplicación</button>
+          : <p>En Chrome: menú <b>⋮</b> → <b>Instalar aplicación</b> (o «Añadir a pantalla de inicio»). Si no aparece, recarga la página una vez.</p>}
+    </section>
+  );
+}
+
 function InstallStep({ onNext }: { onNext: () => void }) {
   const ios = isIOS();
   const [canPrompt, setCanPrompt] = useState(!!deferredPrompt);

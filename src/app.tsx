@@ -54,12 +54,7 @@ function TabBar() {
   );
 }
 
-function Shell() {
-  const {
-    needRefresh: [needRefresh],
-    updateServiceWorker,
-  } = useRegisterSW();
-
+function Shell({ needRefresh, updateServiceWorker }: { needRefresh: boolean; updateServiceWorker: (reload?: boolean) => Promise<void> }) {
   return (
     <div class="app">
       {isSimulated() && (
@@ -103,9 +98,12 @@ function Shell() {
 
 export function App() {
   const s = useSettings();
+  // El service worker se registra desde la primera pantalla (también en el onboarding):
+  // así la app se cachea para usarla sin conexión y Chrome puede ofrecer instalarla.
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW();
   return (
     <LocationProvider>
-      {s.onboarded && s.profile ? <Shell /> : <Onboarding />}
+      {s.onboarded && s.profile ? <Shell needRefresh={needRefresh} updateServiceWorker={updateServiceWorker} /> : <Onboarding />}
     </LocationProvider>
   );
 }
