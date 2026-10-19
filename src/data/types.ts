@@ -46,6 +46,8 @@ export interface Stop {
   /** 'HH:mm' hora de Roma; `approx` si el documento pone «~». */
   start?: string;
   approx?: boolean;
+  /** La hora es de madrugada del día siguiente (p. ej. 00:30 tras la cena del sábado). */
+  afterMidnight?: boolean;
   end?: string;
   placeId?: string;
   title: string;

@@ -23,6 +23,8 @@ export const hotel = {
   name: 'Soha Piazza di Spagna Boutique',
   address: 'Via Zucchelli 32',
   floor: '1.º piso con ascensor',
+  /** Según la ficha de Expedia (19 oct 2026): verificar en la reserva. */
+  reception: 'Recepción 08:00–16:00 · check-in desde las 14:00 · salida antes de las 10:30',
   /** Lo que se enseña al taxista (F21). */
   taxiText: 'Via Zucchelli 32, vicino alla metro Barberini',
   phone: undefined as string | undefined, // ⚠️ Pendiente: verificar en la reserva

@@ -69,3 +69,8 @@ export function daysUntil(ms: number, date: string): number {
   const b = Date.UTC(...(date.split('-').map(Number) as [number, number, number]).map((n, i) => (i === 1 ? n - 1 : n)) as [number, number, number]);
   return Math.round((b - a) / 86_400_000);
 }
+
+/** Día de la semana (en Roma) de una fecha 'YYYY-MM-DD'. */
+export function weekdayOf(date: string): RomeParts['weekday'] {
+  return romeParts(romeToUtc(date, '12:00')).weekday;
+}

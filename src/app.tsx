@@ -1,74 +1,111 @@
-import { useEffect, useState } from 'preact/hooks';
+import { ErrorBoundary, LocationProvider, Route, Router, lazy, useLocation } from 'preact-iso';
 import { useRegisterSW } from 'virtual:pwa-register/preact';
+import { Icon, type IconName } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
-import { days, luciaTrain, tripStart } from '@/data/trip';
-import { itinerary } from '@/data/itinerary';
-import { daysUntil, now } from '@/lib/time';
+import { LostButton } from '@/components/Lost';
+import { isSimulated, stopSimulation } from '@/lib/clock';
+import { useSettings } from '@/lib/settings';
+import { useSyncStatus } from '@/lib/sync-status';
+import { requestSync } from '@/lib/sync';
+import { Onboarding } from '@/screens/Onboarding';
+import { Today } from '@/screens/Today';
 
-// Fase 0: esqueleto desplegable. Las pantallas reales (Hoy, Plan, Mapa…) llegan en la fase 1.
-export function App() {
-  const [t, setT] = useState(() => now());
-  useEffect(() => {
-    const id = window.setInterval(() => setT(now()), 60_000);
-    return () => window.clearInterval(id);
-  }, []);
+const Plan = lazy(() => import('@/screens/Plan').then((m) => m.Plan));
+const MapScreen = lazy(() => import('@/screens/MapScreen').then((m) => m.MapScreen));
+const Us = lazy(() => import('@/screens/Us').then((m) => m.Us));
+const More = lazy(() => import('@/screens/More').then((m) => m.More));
+const Reservations = lazy(() => import('@/screens/Reservations').then((m) => m.Reservations));
+const Food = lazy(() => import('@/screens/Food').then((m) => m.Food));
+const Transport = lazy(() => import('@/screens/Transport').then((m) => m.Transport));
+const Emergency = lazy(() => import('@/screens/Emergency').then((m) => m.Emergency));
+const SettingsScreen = lazy(() => import('@/screens/SettingsScreen').then((m) => m.SettingsScreen));
+const Extra = lazy(() => import('@/screens/extra').then((m) => m.Extra));
 
+const tabs: { href: string; label: string; icon: IconName; match: (p: string) => boolean }[] = [
+  { href: '/', label: 'Hoy', icon: 'today', match: (p) => p === '/' },
+  { href: '/plan', label: 'Plan', icon: 'plan', match: (p) => p.startsWith('/plan') },
+  { href: '/mapa', label: 'Mapa', icon: 'map', match: (p) => p.startsWith('/mapa') },
+  { href: '/nosotros', label: 'Nosotros', icon: 'heart', match: (p) => p.startsWith('/nosotros') },
+  { href: '/mas', label: 'Más', icon: 'more', match: (p) => p.startsWith('/mas') },
+];
+
+function SyncDot() {
+  const { state, pending } = useSyncStatus();
+  const label = state === 'offline' ? 'Sin conexión' : state === 'pending' ? `${pending} cambios pendientes` : 'Sincronizado';
+  return (
+    <button type="button" class="syncbtn" onClick={() => void requestSync(true)} aria-label={`${label}. Toca para sincronizar`}>
+      <span class={`dot ${state === 'offline' ? 'grey' : state === 'pending' ? 'ocre' : 'green'}`} />
+      {state === 'pending' && <span class="num">{pending}</span>}
+    </button>
+  );
+}
+
+function TabBar() {
+  const { path } = useLocation();
+  return (
+    <nav class="tabbar" aria-label="Secciones">
+      {tabs.map((t) => (
+        <a key={t.href} href={t.href} aria-current={t.match(path) ? 'page' : undefined}>
+          <Icon name={t.icon} />
+          {t.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function Shell() {
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW();
 
-  const left = daysUntil(t, tripStart);
-
   return (
-    <main class="shell">
-      <Logo />
-
-      <section class="card" aria-live="polite">
-        {left > 0 ? (
-          <>
-            <p class="muted">Faltan</p>
-            <p class="big num">{left} {left === 1 ? 'día' : 'días'}</p>
-            <p>para Roma · 30 oct – 3 nov 2026</p>
-          </>
-        ) : left === 0 ? (
-          <h2>¡Hoy empieza el viaje!</h2>
-        ) : (
-          <h2>Ciao, Roma</h2>
-        )}
-      </section>
-
-      <section class="card">
-        <h2>El viaje</h2>
-        <ul class="days">
-          {days.map((d) => (
-            <li key={d.day}>
-              <b>{d.roman}</b>
-              <span>
-                {d.label}
-                {d.holiday && <span class="muted"> · {d.holiday}</span>}
-                <span class="muted num"> · {itinerary.filter((s) => s.day === d.day).length} paradas</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section class="card">
-        <h2>Pendiente</h2>
-        <p>
-          Lucía llega a Termini a las <span class="num">{luciaTrain.arrivesTermini}</span>.{' '}
-          {luciaTrain.meetingPoint ? null : <span class="pending">⚠️ Pendiente de confirmar dónde os encontráis.</span>}
-        </p>
-        <p class="muted">Versión de preparación. Hoy, Plan, Mapa y Emergencias llegan en la siguiente entrega.</p>
-      </section>
-
+    <div class="app">
+      {isSimulated() && (
+        <div class="sim">Hora simulada · <button type="button" class="btn ghost" style={{ minHeight: 0, padding: 0, color: 'inherit' }} onClick={() => { stopSimulation(); location.href = '/'; }}>volver a la hora real</button></div>
+      )}
+      <header class="topbar">
+        <a href="/" style={{ textDecoration: 'none' }} aria-label="Hoy"><Logo /></a>
+        <SyncDot />
+      </header>
+      <main class="content">
+        <ErrorBoundary>
+          <Router>
+            <Route path="/" component={Today} />
+            <Route path="/plan" component={Plan} />
+            <Route path="/plan/:day" component={Plan} />
+            <Route path="/mapa" component={MapScreen} />
+            <Route path="/nosotros" component={Us} />
+            <Route path="/nosotros/:section" component={Us} />
+            <Route path="/mas" component={More} />
+            <Route path="/mas/reservas" component={Reservations} />
+            <Route path="/mas/comidas" component={Food} />
+            <Route path="/mas/transporte" component={Transport} />
+            <Route path="/mas/emergencias" component={Emergency} />
+            <Route path="/mas/ajustes" component={SettingsScreen} />
+            <Route path="/mas/:section" component={Extra} />
+            <Route default component={Today} />
+          </Router>
+        </ErrorBoundary>
+      </main>
+      <LostButton />
+      <TabBar />
       {needRefresh && (
         <div class="update" role="status">
           <span>Hay una versión nueva</span>
-          <button type="button" onClick={() => updateServiceWorker(true)}>Actualizar</button>
+          <button type="button" class="btn primary" onClick={() => void updateServiceWorker(true)}>Actualizar</button>
         </div>
       )}
-    </main>
+    </div>
+  );
+}
+
+export function App() {
+  const s = useSettings();
+  return (
+    <LocationProvider>
+      {s.onboarded && s.profile ? <Shell /> : <Onboarding />}
+    </LocationProvider>
   );
 }

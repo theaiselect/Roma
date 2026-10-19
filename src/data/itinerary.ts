@@ -2,11 +2,11 @@ import type { Stop } from './types';
 
 export const itinerary: Stop[] = [
   // ── I · Viernes 30 de octubre ─────────────────────────────────
-  { id: 'd1-bus', day: 1, start: '03:05', end: '07:35', placeId: 'plaza-armas', title: 'Bus Plasencia → Sevilla', note: 'Llega 07:35 a Plaza de Armas', leg: true, pending: 'Confirmar hora y número de billete' },
+  { id: 'd1-bus', day: 1, start: '03:05', end: '07:35', placeId: 'plaza-armas', title: 'Bus Plasencia → Sevilla', note: 'Llega 07:35 a Plaza de Armas', leg: true, pending: 'hora y número de billete' },
   { id: 'd1-uber', day: 1, start: '07:40', placeId: 'svq', title: 'Uber Reserve a SVQ', note: 'Cancelación gratis hasta 1 h antes; mirar el bus a las 06:30; plan B taxi tarifa fija ~25 €', leg: true },
   { id: 'd1-flight', day: 1, start: '09:30', end: '12:35', placeId: 'fco', title: 'Ryanair SVQ → FCO', note: 'Llega 12:35; solo mochila 40×30×20', leg: true },
   { id: 'd1-leonardo', day: 1, start: '13:15', approx: true, placeId: 'termini', title: 'Leonardo Express FCO → Termini', note: '32 min, 14 €; andenes 23–24 en Termini', leg: true },
-  { id: 'd1-lucia', day: 1, start: '13:50', placeId: 'termini', title: 'Encuentro con Lucía', note: 'Lucía llega a Termini a las 11:45, unas 2 h antes que Jesús', leg: true, pending: 'Encuentro en Termini o en el hotel' },
+  { id: 'd1-lucia', day: 1, start: '13:50', placeId: 'termini', title: 'Encuentro con Lucía', note: 'Lucía llega a Termini a las 11:45, unas 2 h antes que Jesús', leg: true, pending: 'encuentro en Termini o en el hotel' },
   { id: 'd1-hotel', day: 1, placeId: 'hotel-soha', title: 'Metro A Termini → Barberini, dejar mochilas', leg: true },
   { id: 'd1-pinsere', day: 1, start: '14:30', placeId: 'pinsere', title: 'Comida en Pinsere' },
   { id: 'd1-latte', day: 1, start: '15:30', placeId: 'come-il-latte', title: 'Helado en Come il Latte' },
@@ -35,7 +35,7 @@ export const itinerary: Stop[] = [
     { placeId: 'flavio-velavevodetto', reason: 'Si no hay mesa' },
   ] },
   { id: 'd2-copas', day: 2, start: '22:30', title: 'Copas de Halloween', note: 'Testaccio o Trastevere' },
-  { id: 'd2-trapizzino', day: 2, start: '00:30', placeId: 'trapizzino-testaccio', title: 'Trapizzino Testaccio', note: 'Sábado hasta 01:00. Vuelta: Línea B (Piramide) → Termini → Línea A, hasta 01:30' },
+  { id: 'd2-trapizzino', day: 2, start: '00:30', afterMidnight: true, placeId: 'trapizzino-testaccio', title: 'Trapizzino Testaccio', note: 'Sábado hasta 01:00. Vuelta: Línea B (Piramide) → Termini → Línea A, hasta 01:30' },
 
   // ── III · Domingo 1 de noviembre (festivo: Ognissanti) ────────
   { id: 'd3-faro', day: 3, start: '09:00', placeId: 'faro', title: 'Desayuno en Faro Caffè Specialty' },
@@ -79,5 +79,5 @@ export const itinerary: Stop[] = [
   { id: 'd5-leonardo', day: 5, start: '06:05', end: '06:37', placeId: 'fco', title: 'Leonardo Express → FCO', note: 'Llega 06:37', leg: true },
   { id: 'd5-flight', day: 5, start: '09:00', end: '11:30', placeId: 'mad-t1', title: 'Ryanair FCO → Madrid T1', note: 'Llega ~11:30', leg: true },
   { id: 'd5-madrid', day: 5, start: '12:00', approx: true, title: 'Madrid: T1 → lanzadera gratis a T4 → Cercanías C1', note: 'A Atocha (Renfe) o Méndez Álvaro (Estación Sur, bus)', leg: true },
-  { id: 'd5-home', day: 5, start: '13:30', approx: true, title: 'Madrid → Plasencia', leg: true, pending: 'Billete sin comprar' },
+  { id: 'd5-home', day: 5, start: '13:30', approx: true, title: 'Madrid → Plasencia', leg: true, pending: 'billete sin comprar' },
 ];
