@@ -98,3 +98,43 @@ describe('tiempo (Open-Meteo)', async () => {
     expect(ageText(0, 5 * 3600_000)).toBe('actualizado hace 5 h');
   });
 });
+
+describe('mapa sin conexión: teselas y datos libres', async () => {
+  const { tilesForBbox, lngToX, latToY, tileUrl, estimateMB, extraUrls, fontStacks } = await import('@/lib/offline-map');
+  const { parseOsrm, parsePhoton, parseOverpass, overpassQuery, formatDuration } = await import('@/lib/osm');
+  it('coordenadas a tesela: el Coliseo en el zoom 14', () => {
+    expect(lngToX(12.4924, 14)).toBe(8_760);
+    expect(latToY(41.8902, 14)).toBe(6_088);
+  });
+  it('cubre el rectángulo y crece con el zoom', () => {
+    const b = { west: 12.4, south: 41.84, east: 12.57, north: 41.95 };
+    const z12 = tilesForBbox(b, 12, 12).length, z14 = tilesForBbox(b, 14, 14).length;
+    expect(z12).toBeGreaterThan(0);
+    expect(z14).toBeGreaterThan(z12);
+    expect(tilesForBbox(b, 0, 0)).toEqual([{ z: 0, x: 0, y: 0 }]);
+    expect(estimateMB()).toBeGreaterThan(5);
+  });
+  it('plantilla de teselas', () => {
+    expect(tileUrl('https://x/planet/v1/{z}/{x}/{y}.pbf', { z: 14, x: 8760, y: 6088 })).toBe('https://x/planet/v1/14/8760/6088.pbf');
+  });
+  it('letras e iconos del estilo', () => {
+    const style = { glyphs: 'https://t/fonts/{fontstack}/{range}.pbf', sprite: 'https://t/sprites/a/ofm', sources: {}, layers: [{ layout: { 'text-font': ['Noto Sans Regular'] } }, { layout: { 'text-font': ['Noto Sans Regular'] } }, { layout: { 'text-font': ['Noto Sans Bold', 'Noto Sans Regular'] } }, {}] };
+    expect(fontStacks(style)).toEqual(['Noto Sans Regular', 'Noto Sans Bold,Noto Sans Regular']);
+    expect(extraUrls(style)).toContain('https://t/fonts/Noto Sans Regular/0-255.pbf');
+    expect(extraUrls(style)).toContain('https://t/sprites/a/ofm@2x.png');
+  });
+  it('lee la ruta de OSRM, el buscador Photon y los puntos de Overpass', () => {
+    expect(parseOsrm({ code: 'Ok', routes: [{ distance: 1234, duration: 900, geometry: { coordinates: [[1, 2]] } }] })).toEqual({ distanceM: 1234, durationS: 900, coords: [[1, 2]] });
+    expect(parseOsrm({ code: 'NoRoute' })).toBeNull();
+    expect(parsePhoton({ features: [{ geometry: { coordinates: [12.47, 41.89] }, properties: { name: 'Pantheon', street: 'Piazza della Rotonda', city: 'Roma' } }, { geometry: { coordinates: [0, 0] }, properties: {} }] })).toMatchObject([{ name: 'Pantheon', lat: 41.89, lng: 12.47 }]);
+    const pois = parseOverpass({ elements: [
+      { type: 'node', id: 1, lat: 41.9, lon: 12.48, tags: { amenity: 'drinking_water' } },
+      { type: 'way', id: 2, center: { lat: 41.91, lon: 12.49 }, tags: { amenity: 'toilets', fee: 'yes' } },
+      { type: 'node', id: 3, lat: 41.9, lon: 12.5, tags: { amenity: 'bench' } },
+    ] });
+    expect(pois.map((p) => [p.id, p.kind, p.note])).toEqual([['n1', 'fountain', undefined], ['w2', 'toilets', 'De pago']]);
+    expect(overpassQuery()).toContain('amenity=drinking_water');
+    expect(formatDuration(900)).toBe('15 min');
+    expect(formatDuration(4000)).toBe('1 h 7 min');
+  });
+});

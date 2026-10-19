@@ -216,3 +216,13 @@ table.simple td, table.simple th { text-align: left; padding: 0.35rem 0; border-
   .content { padding: 0; max-width: none; }
   .card { box-shadow: none; border: 1px solid #ddd; }
 }
+
+/* Mapa interactivo */
+.mapwrap { position: relative; }
+.romamap { width: 100%; height: min(62vh, 520px); min-height: 340px; border-radius: var(--radius); overflow: hidden; background: color-mix(in srgb, var(--pino) 6%, var(--tarjeta)); touch-action: pan-x pan-y; }
+.mapwrap .locate { position: absolute; left: 10px; bottom: 28px; background: var(--tarjeta); box-shadow: var(--sombra); z-index: 2; }
+.searchbox { position: relative; }
+.searchbox input { width: 100%; }
+.results { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20; list-style: none; margin: 0; padding: 0.25rem; background: var(--tarjeta); border: 1px solid var(--linea); border-radius: var(--radius); box-shadow: var(--sombra); max-height: 50vh; overflow: auto; }
+.results button { display: grid; width: 100%; text-align: left; gap: 0.1rem; background: none; border: 0; color: inherit; font: inherit; min-height: var(--tap); padding: 0.4rem 0.6rem; border-radius: 10px; }
+.results button:active { background: color-mix(in srgb, var(--tinta) 8%, transparent); }
