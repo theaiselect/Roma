@@ -4,7 +4,9 @@ import { placeById } from '@/data/places';
 import { days, travellers } from '@/data/trip';
 import type { DayNum } from '@/data/types';
 import { DailyQuestionCard } from '@/screens/us-daily';
+import { appNow } from '@/lib/clock';
 import { useVote } from '@/lib/reveal';
+import { romeParts } from '@/lib/time';
 
 /** Cenas con plan B (F17): cada uno vota y se revela cuando votan los dos. */
 function dinnersOf(day: DayNum) {
@@ -54,7 +56,8 @@ export function MomentVote({ day }: { day: DayNum }) {
 }
 
 export function Votes() {
-  const [day, setDay] = useState<DayNum>(1);
+  // Abre en el día del viaje en curso (o el primero si aún no ha empezado).
+  const [day, setDay] = useState<DayNum>(() => days.find((d) => d.date === romeParts(appNow()).date)?.day ?? 1);
   return (
     <section class="stack">
       <div class="legend" role="group" aria-label="Día">
