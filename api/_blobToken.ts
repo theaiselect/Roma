@@ -6,3 +6,8 @@ export function blobToken(): string | undefined {
   const k = Object.keys(process.env).find((n) => n.endsWith('READ_WRITE_TOKEN') && process.env[n]);
   return k ? process.env[k] : undefined;
 }
+
+/** Con OIDC (proyectos nuevos) no hay token largo: basta con el id del almacén; Vercel da el token al ejecutar. */
+export function blobConfigured(): boolean {
+  return Boolean(blobToken() || process.env.BLOB_STORE_ID);
+}

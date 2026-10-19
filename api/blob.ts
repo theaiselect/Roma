@@ -1,6 +1,6 @@
 import { get, put } from '@vercel/blob';
 import { checkTripCode, json } from './_auth.js';
-import { blobToken } from './_blobToken.js';
+import { blobConfigured, blobToken } from './_blobToken.js';
 import { RedisStore } from './_redis.js';
 
 // Fotos, notas de voz y entradas: Blob privado, solo a través de esta ruta y con el código del viaje.
@@ -9,7 +9,7 @@ const MAX_BYTES = 4 * 1024 * 1024; // límite de cuerpo de las funciones de Verc
 const TYPES = /^(image\/(jpeg|png|webp|heic|heif|gif)|application\/pdf|audio\/(webm|mp4|mpeg|ogg|aac|x-m4a))(;.*)?$/i;
 
 function configured(): boolean {
-  return Boolean(blobToken());
+  return blobConfigured();
 }
 
 export async function POST(req: Request): Promise<Response> {
