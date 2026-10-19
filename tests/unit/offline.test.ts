@@ -116,3 +116,12 @@ describe('descarga', () => {
     expect(f.days).toHaveLength(2);
   });
 });
+
+import { closedToday } from '@/screens/today-extras';
+import { romeToUtc } from '@/lib/time';
+describe('cerrados hoy', () => {
+  it('el domingo cierra Da Enzo; el lunes no', () => {
+    expect(closedToday(romeToUtc('2026-11-01', '11:00'))).toContain('Da Enzo al 29');
+    expect(closedToday(romeToUtc('2026-11-02', '11:00'))).not.toContain('Da Enzo al 29');
+  });
+});

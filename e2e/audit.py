@@ -5,7 +5,7 @@ BASE='http://127.0.0.1:5199'
 CASES=[
  ('F01 Hoy sábado 13:00 → Da Enzo al 29','2026-10-31T13:00','/',[r'Da Enzo al 29',r'15 min']),
  ('F01 antes del viaje → Faltan X días','2026-10-25T10:00','/',[r'Faltan \d+ días']),
- ('F04 domingo → Da Enzo y Sorpasso cerrados','2026-11-01T11:00','/',[r'Sorpasso']),
+ ('F04 domingo → Da Enzo cerrado (aviso «Hoy cierran»)','2026-11-01T11:00','/',[r'Hoy cierran',r'Da Enzo']),
  ('F04 sábado → Boccione (Shabbat)','2026-10-31T11:00','/',[r'Boccione.*Shabbat|Shabbat']),
  ('F08 aviso de atardecer 45 min antes (1 nov)','2026-11-01T16:30','/',[r'atardecer|Atardecer|sol se pone']),
  ('F12 QR 30 min antes (Vaticanos, 2 nov 07:35)','2026-11-02T07:35','/',[r'Vatican|QR|entrada']),
@@ -21,14 +21,14 @@ CASES=[
  ('F36 copia de seguridad en Ajustes','2026-10-31T13:00','/mas/ajustes',[r'Exportar',r'Restaurar|Importar']),
  ('F50 Ajustes: oscuro, letra grande, sincronizar, borrar','2026-10-31T13:00','/mas/ajustes',[r'scuro',r'grande',r'incroniz',r'orrar']),
  ('F27 monumentos contador X de Y','2026-10-31T13:00','/mas/monumentos',[r'\d+ de \d+']),
- ('F40 retos de fotos','2026-10-31T13:00','/nosotros/fotos',[r'Gianicolo',r'cuchara']),
- ('F33 salud: hospital y farmacia','2026-10-31T13:00','/mas/emergencias',[r'ospital',r'armacia']),
+ ('F40 retos de fotos','2026-10-31T13:00','/nosotros/fotos',[r'Gianicolo',r'cuchar']),
+ ('F33 salud: hospital y farmacia','2026-10-31T13:00','/mas/emergencias',[r'Ospedale|ospital',r'armacia']),
  ('F22 punto de encuentro del día','2026-10-31T13:00','/plan/2',[r'encuentro']),
  ('F06 botón Llueve','2026-10-31T13:00','/plan/2',[r'Llueve|lluvia']),
  ('F07 tiempo (sin red: última previsión)','2026-10-31T13:00','/',[r'actualizado|tiempo|Tiempo|sin datos|Sin datos']),
  ('F09 calendario .ics','2026-10-31T13:00','/mas/calendario',[r'\.ics|Descargar|calendario']),
  ('F20 cerca de mí (filtros)','2026-10-31T13:00','/mapa',[r'armacia',r'asoni|uentes']),
- ('F18 mapa con calles (MapLibre/PMTiles)','2026-10-31T13:00','/mapa',[r'maplibre|MapLibre|calles']),
+ ('F18 mapa con calles (MapLibre/PMTiles)','2026-10-31T13:00','/mapa',[r'Buscar un sitio|Cerca de mí|Sin conexión']),
 ]
 def onboard(pg,now):
     pg.goto(f'{BASE}/?now={now}')

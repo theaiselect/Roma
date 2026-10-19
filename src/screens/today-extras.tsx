@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { meetingPoints, meetingRule } from '@/data/alternatives';
 import { nightBefore } from '@/data/packing';
+import { places } from '@/data/places';
 import { reservations } from '@/data/reservations';
 import { days } from '@/data/trip';
 import type { DayNum } from '@/data/types';
@@ -10,6 +11,7 @@ import { useKind } from '@/lib/db';
 import { lastMetroWarning } from '@/lib/metro';
 import { rainDays, setShared, useSharedState, useTimeline } from '@/lib/plan-state';
 import { useSettings } from '@/lib/settings';
+import { opensOn } from '@/lib/schedule';
 import { sunsetAt } from '@/lib/sun';
 import { romeParts } from '@/lib/time';
 import { ageText, climateNormals, isRainy, useForecast, weatherText } from '@/lib/weather';
@@ -31,6 +33,24 @@ function WeatherCard({ date }: { date: string }) {
       </div>
       <p class="small"><Icon name="sun" size={16} /> Atardecer a las <b class="num">{sunset}</b></p>
       {f ? <p class="small muted">Previsión de Open-Meteo, {ageText(f.fetchedAt)}.</p> : <p class="small muted">Sin previsión guardada: es lo típico de Roma en estas fechas.</p>}
+    </section>
+  );
+}
+
+/** Sitios para comer que hoy cierran (según los horarios guardados), para no ir en balde. */
+export function closedToday(now: number): string[] {
+  const wd = romeParts(now).weekday;
+  return places.filter((pl) => pl.kind === 'food' && opensOn(pl, wd) === false).map((pl) => pl.name);
+}
+
+function ClosedToday({ now }: { now: number }) {
+  const names = closedToday(now);
+  if (!names.length) return null;
+  return (
+    <section class="card stack" style={{ gap: '0.35rem' }} aria-label="Sitios cerrados hoy">
+      <b>Hoy cierran</b>
+      <p class="small">{names.join(' · ')}</p>
+      <p class="small muted">Según los horarios guardados; si vais a otro sitio, mirad antes que abre.</p>
     </section>
   );
 }
@@ -120,6 +140,7 @@ export function TodayExtras({ now, day }: { now: number; day: DayNum | null }) {
       {sunsetSoon && <div class="alert info"><Icon name="sun" /><span>El atardecer es a las {romeParts(sunset!).time}: en {Math.round((sunset! - now) / 60_000)} min.</span></div>}
       {metro && <div class="alert"><Icon name="train" /><span>{metro} Si no, taxi o a pie.</span></div>}
       {info && <WeatherCard date={info.date} />}
+      {day && <ClosedToday now={now} />}
       {day && <RainAndMeeting day={day} />}
       {showNight && tomorrow && <NightBefore forDay={tomorrow.day} />}
       {day && <DailyQuestionCard day={day} />}
