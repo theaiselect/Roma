@@ -1,5 +1,6 @@
 import { get, put } from '@vercel/blob';
 import { checkTripCode, json } from './_auth.js';
+import { blobToken } from './_blobToken.js';
 import { RedisStore } from './_redis.js';
 
 // Fotos, notas de voz y entradas: Blob privado, solo a través de esta ruta y con el código del viaje.
@@ -8,7 +9,7 @@ const MAX_BYTES = 4 * 1024 * 1024; // límite de cuerpo de las funciones de Verc
 const TYPES = /^(image\/(jpeg|png|webp|heic|heif|gif)|application\/pdf|audio\/(webm|mp4|mpeg|ogg|aac|x-m4a))(;.*)?$/i;
 
 function configured(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  return Boolean(blobToken());
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -23,7 +24,7 @@ export async function POST(req: Request): Promise<Response> {
   if (len > MAX_BYTES) return json(413, { error: 'too_large' });
   const buf = await req.arrayBuffer();
   if (buf.byteLength > MAX_BYTES) return json(413, { error: 'too_large' });
-  await put(`f/${id}`, buf, { access: 'private', contentType: type.split(';')[0], addRandomSuffix: false, allowOverwrite: true });
+  await put(`f/${id}`, buf, { access: 'private', contentType: type.split(';')[0], addRandomSuffix: false, allowOverwrite: true, token: blobToken() });
   return json(200, { ok: true, id });
 }
 
@@ -33,7 +34,7 @@ export async function GET(req: Request): Promise<Response> {
   if (!configured()) return json(503, { error: 'not_configured' });
   const id = new URL(req.url).searchParams.get('id') ?? '';
   if (!ID_RE.test(id)) return json(400, { error: 'bad_id' });
-  const res = await get(`f/${id}`, { access: 'private' });
+  const res = await get(`f/${id}`, { access: 'private', token: blobToken() });
   if (!res || res.statusCode !== 200) return json(404, { error: 'not_found' });
   return new Response(res.stream, {
     status: 200,

@@ -1,4 +1,5 @@
 import { json, redisEnv, tripCodeConfigured } from './_auth.js';
+import { blobToken } from './_blobToken.js';
 
 // Estado de la configuración del servidor. Solo booleanos: no expone ningún secreto.
 export function GET(): Response {
@@ -6,6 +7,6 @@ export function GET(): Response {
     ok: true,
     tripCode: tripCodeConfigured(),
     redis: Boolean(redisEnv()),
-    blob: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    blob: Boolean(blobToken()),
   });
 }
