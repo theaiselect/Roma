@@ -6,7 +6,7 @@ export const itinerary: Stop[] = [
   { id: 'd1-uber', day: 1, start: '07:40', placeId: 'svq', title: 'Uber Reserve a SVQ', note: 'Cancelación gratis hasta 1 h antes; mirar el bus a las 06:30; plan B taxi tarifa fija ~25 €', leg: true },
   { id: 'd1-flight', day: 1, start: '09:30', end: '12:35', placeId: 'fco', title: 'Ryanair SVQ → FCO', note: 'Llega 12:35; solo mochila 40×30×20', leg: true },
   { id: 'd1-leonardo', day: 1, start: '13:15', approx: true, placeId: 'termini', title: 'Leonardo Express FCO → Termini', note: '32 min, 14 €; andenes 23–24 en Termini', leg: true },
-  { id: 'd1-lucia', day: 1, start: '13:50', placeId: 'termini', title: 'Encuentro con Lucía', note: 'Lucía llega a Termini a las 11:45, unas 2 h antes que Jesús', leg: true, pending: 'encuentro en Termini o en el hotel' },
+  { id: 'd1-lucia', day: 1, start: '13:50', placeId: 'termini', title: 'Encuentro con Lucía', note: 'Lucía llega a Termini a las 11:45, unas 2 h antes que Jesús', leg: true },
   { id: 'd1-hotel', day: 1, placeId: 'hotel-soha', title: 'Metro A Termini → Barberini, dejar mochilas', leg: true },
   { id: 'd1-pinsere', day: 1, start: '14:30', placeId: 'pinsere', title: 'Comida en Pinsere' },
   { id: 'd1-latte', day: 1, start: '15:30', placeId: 'come-il-latte', title: 'Helado en Come il Latte' },

@@ -42,7 +42,7 @@ export const flights = {
 /** Tren de Lucía a Termini el viernes 30. */
 export const luciaTrain = {
   arrivesTermini: '11:45',
-  meetingPoint: undefined as 'termini' | 'hotel' | undefined, // ⚠️ Pendiente de confirmar
+  meetingPoint: 'termini' as 'termini' | 'hotel' | undefined, // confirmado por Jesús (19 oct)
 };
 
 export const budget = {
