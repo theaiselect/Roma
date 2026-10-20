@@ -4,6 +4,7 @@ import { telHref } from '@/components/StopCard';
 import { consulateEmail, emergencyContacts, healthCard, lostDocumentSteps } from '@/data/emergency';
 import { BackTitle } from '@/screens/More';
 import { HealthPlaces } from '@/screens/health';
+import { HotelCard, MyCardSection } from '@/screens/emergency-extras';
 
 /** Emergencias (F32): todo funciona sin conexión; los teléfonos son enlaces tel:. */
 export function Emergency() {
@@ -17,6 +18,8 @@ export function Emergency() {
         <ShareLocation />
         <a class="btn block" href="/mapa?f=pharmacy"><Icon name="map" /> Farmacias cerca de mí</a>
       </section>
+      <HotelCard />
+      <MyCardSection />
       <section class="stack">
         {emergencyContacts.filter((c) => c.id !== '112').map((c) => (
           <article key={c.id} class="card stack" style={{ gap: '0.4rem' }}>

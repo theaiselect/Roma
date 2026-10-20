@@ -66,6 +66,16 @@ export const phraseGroups: PhraseGroup[] = [
     { es: 'Abierto / Cerrado', it: 'Aperto / Chiuso', say: 'a-PER-to / KIU-so' },
     { es: 'Entrada / Salida', it: 'Ingresso / Uscita', say: 'in-GRES-so / u-SHI-ta' },
   ] },
+  { id: 'hotel', title: 'Hotel y taxi', items: [
+    { es: 'Tenemos una reserva de cuatro noches', it: 'Abbiamo una prenotazione per quattro notti', say: 'ab-BIA-mo una prenota-TSIO-ne per CUAT-tro NOT-ti' },
+    { es: '¿Podemos dejar las mochilas hasta las 14:00?', it: 'Possiamo lasciare gli zaini fino alle due?', say: 'pos-SIA-mo la-SHA-re li DSA-ini FI-no al-le DU-e' },
+    { es: 'Nos vamos muy temprano el martes: ¿cómo dejamos la llave?', it: 'Martedì partiamo molto presto: come lasciamo la chiave?', say: 'mar-te-DI par-TIA-mo MOL-to PRES-to: CO-me la-SHA-mo la KIA-ve' },
+    { es: '¿A qué hora es el desayuno?', it: 'A che ora è la colazione?', say: 'a ke O-ra e la cola-TSIO-ne' },
+    { es: '¿Puede llamarnos un taxi, por favor?', it: 'Può chiamarci un taxi, per favore?', say: 'pu-O kia-MAR-chi un TA-ksi' },
+    { es: 'Llévenos a esta dirección, por favor', it: 'Ci porti a questo indirizzo, per favore', say: 'chi POR-ti a CUES-to indi-RI-tso' },
+    { es: '¿Cuánto cuesta el trayecto, más o menos?', it: 'Quanto costa la corsa, più o meno?', say: 'CUAN-to COS-ta la COR-sa, piu o ME-no' },
+    { es: 'Tenemos que irnos mañana a las 5:30', it: 'Domani dobbiamo partire alle cinque e mezza', say: 'do-MA-ni dob-BIA-mo par-TI-re al-le CHIN-cue e ME-dsa' },
+  ] },
   { id: 'emergencias', title: 'Emergencias', items: [
     { es: '¡Ayuda!', it: 'Aiuto!', say: 'a-IU-to' },
     { es: 'Llame a una ambulancia', it: 'Chiami un’ambulanza', say: 'KIA-mi un-ambu-LAN-tsa' },

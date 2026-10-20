@@ -40,3 +40,20 @@ export function untilText(n: number): string {
   if (n === 1) return 'mañana';
   return `en ${n} días`;
 }
+
+export interface OpenReservation { r: Reservation; date?: string; left: number | null }
+
+/** Reservas que aún hay que hacer (por hacer o pendientes), con los días que quedan. Las de días ya pasados no se avisan. */
+export function openReservations(list: readonly Reservation[], statusOf: (r: Reservation) => ReservationStatus, now: number, daysLeft: (now: number, date: string) => number): OpenReservation[] {
+  const out: OpenReservation[] = [];
+  for (const r of sortReservations(list, statusOf)) {
+    const st = statusOf(r);
+    if (st !== 'todo' && st !== 'pending') continue;
+    const date = reservationDate(r);
+    const left = date ? daysLeft(now, date) : null;
+    if (left !== null && left < 0) continue;
+    out.push({ r, date, left });
+  }
+  // Lo más urgente primero; lo que no tiene fecha, al final.
+  return out.sort((a, b) => (a.left ?? 999) - (b.left ?? 999));
+}

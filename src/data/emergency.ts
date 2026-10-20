@@ -31,3 +31,11 @@ export const healthCard: string[] = [
   'La Tarjeta Sanitaria Europea da acceso a la sanidad pública italiana en las mismas condiciones que a un italiano.',
   'Llevad la física cada uno. Si no la tenéis a tiempo, se pide el Certificado Provisional Sustitutorio en la sede electrónica de la Seguridad Social.',
 ];
+
+/** Datos del hotel para enseñar en un taxi o copiar. */
+export const hotel = {
+  name: 'Hotel Soha Piazza di Spagna',
+  addressIt: 'Via Zucchelli 32, Roma',
+  taxiIt: 'Via Zucchelli 32, Roma',
+  reception: '08:00–16:00',
+};

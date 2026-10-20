@@ -11,6 +11,7 @@ import { syncInfo } from '@/lib/sync-status';
 import { italianVoice } from '@/lib/tts';
 import { downloadBackup, restoreBackup } from '@/lib/backup';
 import { checkConnection, type ConnectionReport } from '@/lib/connection';
+import { useLocal } from '@/lib/local';
 import { useOnline } from '@/lib/online';
 import { checkForUpdate, type UpdateResult } from '@/lib/update';
 
@@ -60,6 +61,8 @@ function Status() {
 /** Ajustes (F50): todo persiste al cerrar la app. */
 export function SettingsScreen() {
   const s = useSettings();
+  const [lastBackup] = useLocal<number | null>('roma-last-backup', null);
+  useEffect(() => { if (location.hash === '#copia') document.getElementById('copia')?.scrollIntoView({ block: 'start' }); }, []);
   const [code, setCode] = useState(s.tripCode ?? '');
   const [showCode, setShowCode] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -123,8 +126,9 @@ export function SettingsScreen() {
           </p>
         )}
       </section>
-      <section class="card stack">
+      <section class="card stack" id="copia">
         <h2>Copia de seguridad</h2>
+        <p class="small" role="status">{lastBackup ? `Última copia guardada: ${new Date(lastBackup).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}.` : 'Todavía no has guardado ninguna copia en este móvil.'}</p>
         <p class="small muted">Todo lo vuestro (gastos, diario, fotos, entradas, casillas) en un archivo. Guárdalo en Drive o envíatelo por WhatsApp.</p>
         <button type="button" class="btn" onClick={() => void downloadBackup()}>Exportar copia</button>
         <label class="btn ghost">

@@ -3,6 +3,7 @@ import { meetingPoints, meetingRule, rainPlans } from '@/data/alternatives';
 import type { DayNum } from '@/data/types';
 import { rainDays, setShared, useSharedState } from '@/lib/plan-state';
 import { DinnerVote } from '@/screens/us-votes';
+import { RainSuggestion } from '@/screens/today-extras';
 
 // Botón «Llueve» (F06), punto de encuentro (F22) y votación de cena (F17) en cada día del plan.
 export function PlanExtras({ day }: { day: DayNum }) {
@@ -15,6 +16,7 @@ export function PlanExtras({ day }: { day: DayNum }) {
 
   return (
     <section class="stack">
+      <RainSuggestion day={day} active={rain} />
       {hasRainPlan && (
         <div class="spread card">
           <div>

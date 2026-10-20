@@ -75,3 +75,8 @@ export function ageText(fetchedAt: number, now = Date.now()): string {
   if (h < 48) return `actualizado hace ${h} h`;
   return `actualizado hace ${Math.floor(h / 24)} días`;
 }
+
+/** ¿Conviene proponer el plan de lluvia? Solo si la previsión es de lluvia, hay plan para ese día y aún no está activado. */
+export function rainSuggested(day: Pick<DayForecast, 'code' | 'rainProb'> | undefined, hasPlan: boolean, active: boolean): boolean {
+  return Boolean(day) && hasPlan && !active && isRainy(day!.code, day!.rainProb);
+}

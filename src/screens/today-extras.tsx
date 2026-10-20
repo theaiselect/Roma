@@ -3,18 +3,24 @@ import { meetingPoints, meetingRule } from '@/data/alternatives';
 import { nightBefore } from '@/data/packing';
 import { places } from '@/data/places';
 import { reservations } from '@/data/reservations';
-import { days } from '@/data/trip';
+import { days, tripEnd, tripStart } from '@/data/trip';
 import type { DayNum } from '@/data/types';
 import { openTicket, type TicketEntity } from '@/screens/Reservations';
 import { setCheck, useChecks } from '@/lib/checks';
-import { useKind } from '@/lib/db';
+import { useKind, type Entity } from '@/lib/db';
 import { lastMetroWarning } from '@/lib/metro';
 import { rainDays, setShared, useSharedState, useTimeline } from '@/lib/plan-state';
+import { useLocal } from '@/lib/local';
+import { backupReminder } from '@/lib/backup-reminder';
+import { useChecks as useReservationStatus } from '@/lib/checks';
+import { openReservations, untilText } from '@/lib/reservations';
+import type { ReservationStatus } from '@/data/types';
+import { rainPlans } from '@/data/alternatives';
 import { useSettings } from '@/lib/settings';
 import { opensOn } from '@/lib/schedule';
 import { sunsetAt } from '@/lib/sun';
-import { romeParts } from '@/lib/time';
-import { ageText, climateNormals, isRainy, useForecast, weatherText } from '@/lib/weather';
+import { daysUntil, romeParts, romeToUtc } from '@/lib/time';
+import { ageText, climateNormals, isRainy, rainSuggested, useForecast, weatherText } from '@/lib/weather';
 import { DailyQuestionCard } from '@/screens/us-daily';
 
 export function WeatherCard({ date }: { date: string }) {
@@ -106,12 +112,28 @@ function TicketsSoon({ now }: { now: number }) {
   );
 }
 
+/** Si la previsión del día es de lluvia y hay plan bajo techo, se propone activarlo (un toque, vale para los dos móviles). */
+export function RainSuggestion({ day, active }: { day: DayNum; active: boolean }) {
+  const f = useForecast();
+  const date = days.find((d) => d.day === day)?.date;
+  const fc = f && !f.normals ? f.days.find((d) => d.date === date) : undefined;
+  if (!rainSuggested(fc, rainPlans.some((p) => p.day === day), active)) return null;
+  return (
+    <div class="alert info" role="status" style={{ alignItems: 'center' }}>
+      <Icon name="rain" />
+      <span style={{ flex: 1 }}>La previsión da lluvia{fc?.rainProb != null ? ` (${fc.rainProb} %)` : ''} para este día. ¿Cambiamos la tarde por sitios bajo techo?</span>
+      <button type="button" class="btn primary" onClick={() => void setShared(`rain:${day}`, true)}>Activar plan de lluvia</button>
+    </div>
+  );
+}
+
 function RainAndMeeting({ day }: { day: DayNum }) {
   const state = useSharedState();
   const rain = rainDays(state).has(day);
   const custom = state.get('meeting')?.value as string | undefined;
   return (
     <section class="card stack" style={{ gap: '0.5rem' }}>
+      <RainSuggestion day={day} active={rain} />
       <div class="spread">
         <div><b>{rain ? '☔ Plan de lluvia activado' : '¿Llueve?'}</b><p class="small muted">{rain ? 'La tarde cambia a sitios bajo techo en los dos móviles.' : 'Cambia la tarde por sitios bajo techo.'}</p></div>
         <button type="button" class={`btn${rain ? '' : ' primary'}`} onClick={() => void setShared(`rain:${day}`, !rain)}>{rain ? 'Deshacer' : 'Llueve'}</button>
@@ -119,6 +141,71 @@ function RainAndMeeting({ day }: { day: DayNum }) {
       <div class="frieze" aria-hidden="true" />
       <p class="small"><b>Punto de encuentro:</b> {custom || meetingPoints[day].place}</p>
       <p class="small muted">{meetingRule}</p>
+    </section>
+  );
+}
+
+/** Reservas que aún hay que hacer, lo más urgente primero. Desaparece cuando todo está hecho. */
+export function OpenReservationsCard({ now }: { now: number }) {
+  const status = useReservationStatus('reservations');
+  const list = openReservations(reservations, (r) => (status.get(r.id)?.value as ReservationStatus | undefined) ?? r.status, now, daysUntil);
+  if (!list.length) return null;
+  const shown = list.slice(0, 4);
+  return (
+    <section class="card stack" style={{ gap: '0.4rem' }} aria-label="Reservas por hacer">
+      <div class="spread"><b>{list.length === 1 ? 'Queda 1 reserva por hacer' : `Quedan ${list.length} reservas por hacer`}</b><a class="small" href="/mas/reservas">Ver todas</a></div>
+      <ul class="list small">
+        {shown.map(({ r, left }) => (
+          <li key={r.id} class="spread">
+            <a href="/mas/reservas">{r.title}</a>
+            {left !== null && <span class={`chip num ${left <= 3 ? 'warn' : ''}`}>{untilText(left)}</span>}
+          </li>
+        ))}
+      </ul>
+      {list.length > shown.length && <p class="small muted">y {list.length - shown.length} más…</p>}
+    </section>
+  );
+}
+
+/** Recordatorio de copia de seguridad: solo si hay datos y hace días que no se guarda ninguna. */
+export function BackupReminderCard({ now }: { now: number }) {
+  const diary = useKind<Entity>('diary') ?? [];
+  const photos = useKind<Entity>('photo') ?? [];
+  const expenses = useKind<Entity>('expense') ?? [];
+  const [lastAt] = useLocal<number | null>('roma-last-backup', null);
+  const items = [...diary, ...photos, ...expenses].filter((e) => !e.deleted).length;
+  const r = backupReminder({ now, lastAt, items, returnAt: romeToUtc(tripEnd, '00:00'), tripStartAt: romeToUtc(tripStart, '00:00') });
+  if (!r) return null;
+  return (
+    <section class={`alert ${r.urgent ? '' : 'info'}`} role="status" style={{ alignItems: 'center' }}>
+      <Icon name="backup" />
+      <span style={{ flex: 1 }}>{r.text}</span>
+      <a class="btn primary" href="/mas/ajustes#copia">Guardar copia</a>
+    </section>
+  );
+}
+
+/** Previsión de los días del viaje (Open-Meteo da 16 días: desde unos 2 semanas antes ya se ve el viaje entero). */
+export function TripForecast() {
+  const f = useForecast();
+  const rows = days.map((d) => ({ d, fc: f && !f.normals ? f.days.find((x) => x.date === d.date) : undefined }));
+  if (!rows.some((r) => r.fc)) return null;
+  return (
+    <section class="card stack" style={{ gap: '0.5rem' }} aria-label="Previsión del viaje">
+      <b>El tiempo en el viaje</b>
+      <div class="scroll-row" style={{ display: 'flex', gap: '0.6rem', overflowX: 'auto' }}>
+        {rows.map(({ d, fc }) => (
+          <a key={d.day} href={`/plan/${d.day}`} class="card stack" style={{ gap: '0.15rem', minWidth: '5.2rem', padding: '0.6rem', textDecoration: 'none', textAlign: 'center' }}>
+            <span class="eyebrow">{d.label.slice(0, 3)} {d.date.slice(8)}</span>
+            {fc ? (<>
+              <span style={{ justifySelf: 'center' }}><Icon name={isRainy(fc.code, fc.rainProb) ? 'rain' : 'sun'} /></span>
+              <b class="num">{fc.tmin}–{fc.tmax}°</b>
+              <span class="small muted">{fc.rainProb !== null ? `lluvia ${fc.rainProb} %` : weatherText(fc.code)}</span>
+            </>) : <span class="small muted">sin datos aún</span>}
+          </a>
+        ))}
+      </div>
+      {f && <p class="small muted">Previsión de Open-Meteo, {ageText(f.fetchedAt)}. Cambia hasta el último día.</p>}
     </section>
   );
 }
@@ -137,6 +224,8 @@ export function TodayExtras({ now, day }: { now: number; day: DayNum | null }) {
   return (
     <>
       <TicketsSoon now={now} />
+      <BackupReminderCard now={now} />
+      <OpenReservationsCard now={now} />
       {sunsetSoon && <div class="alert info"><Icon name="sun" /><span>El atardecer es a las {romeParts(sunset!).time}: en {Math.round((sunset! - now) / 60_000)} min.</span></div>}
       {metro && <div class="alert"><Icon name="train" /><span>{metro} Si no, taxi o a pie.</span></div>}
       {info && <WeatherCard date={info.date} />}

@@ -1,4 +1,6 @@
+import { appNow } from '@/lib/clock';
 import { db, DB_EVENT, type Entity } from '@/lib/db';
+import { readLocal, writeLocal } from '@/lib/local';
 import { wins } from '@/lib/merge';
 
 // Copia de seguridad (F36): todo a un JSON (datos vivos + archivos) y restaurar en cualquier navegador.
@@ -31,13 +33,18 @@ export async function makeBackup(): Promise<Backup> {
   return { app: 'roma', version: 1, exportedAt: Date.now(), entities, blobs };
 }
 
+const LAST_KEY = 'roma-last-backup';
+export const lastBackupAt = (): number | null => readLocal<number | null>(LAST_KEY, null);
+
 export async function downloadBackup(): Promise<void> {
   const b = await makeBackup();
   const blob = new Blob([JSON.stringify(b)], { type: 'application/json' });
   const date = new Date().toISOString().slice(0, 10);
   const file = new File([blob], `roma-copia-${date}.json`, { type: 'application/json' });
   if (navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file], title: 'Copia de seguridad de Roma' }).catch(() => undefined);
+    let shared = true;
+    await navigator.share({ files: [file], title: 'Copia de seguridad de Roma' }).catch(() => { shared = false; });
+    if (shared) writeLocal(LAST_KEY, appNow());
     return;
   }
   const a = document.createElement('a');
@@ -45,6 +52,7 @@ export async function downloadBackup(): Promise<void> {
   a.download = file.name;
   a.click();
   window.setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+  writeLocal(LAST_KEY, appNow());
 }
 
 /** Restaura una copia: cada dato se fusiona con la regla de último cambio; los archivos se añaden. */

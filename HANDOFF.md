@@ -44,10 +44,11 @@ Auth: cabecera `x-trip-code` (api/_auth.ts normaliza: minúsculas, sin espacios,
 - Servicios reales (OpenFreeMap, OSRM, Photon, Overpass) solo probados con simulaciones: el entorno de pruebas no tiene internet.
 - Pantallas mejoradas a fondo (fase 4): Plan (resumen del día, casilla «hecho» en cada parada con lista `stops`, estado de la entrada por parada, día anterior/siguiente), Reservas (resumen, grupos, «Ya está hecho», nota propia en lista `resnotes`, visor de entradas a pantalla completa `TicketViewer`/`lib/ticket-view.ts`), Diario (guarda solo lo cambiado y al salir, varias notas de voz), Cartas (editar antes de abrir, se desbloquean con la pantalla abierta), Votos (resumen de coincidencias, día futuro bloqueado), Postal (3 estilos, vista previa automática), Canción (una por persona y día, cualquier enlace https), Libro (archivo HTML autónomo con fotos, `lib/book.ts`), Ajustes («Probar conexión y código», «Buscar versión nueva», descarga sin conexión).
 - Pruebas: `tests/unit/phase4.test.ts` y `e2e/screens.py` (servidor e2e recién arrancado en :5199; reiniciarlo con `kill $(lsof -ti tcp:5199)` antes de cada suite que escribe estado).
+- Fase 5 (20 oct): aviso de reservas por hacer en Hoy (`OpenReservationsCard`, `openReservations`), previsión de los 5 días del viaje antes de empezar (`TripForecast`, Open-Meteo da 16 días), sugerencia de plan de lluvia cuando la previsión da lluvia (`RainSuggestion`, `rainSuggested`), recordatorio de copia de seguridad (`lib/backup-reminder.ts`, fecha de la última copia en `localStorage` `roma-last-backup`, sale en Hoy y en Ajustes `#copia`), Emergencias con «Nuestro hotel» (enseñar al taxista) y «Mi ficha» (solo local, `roma-my-card`), Frases con grupo «Hotel y taxi» y favoritas (`roma-fav-phrases`). Datos solo locales en `lib/local.ts`. Pruebas: `tests/unit/phase5.test.ts`, `e2e/extras.py`.
 - Fase de rediseño visual pendiente (orden acordado: primero funcionar, luego bonito).
 
 ## Cómo probar
-- `npx tsc --noEmit -p . && npx vitest run` (106 tests)
+- `npx tsc --noEmit -p . && npx vitest run` (144 tests)
 - e2e Python Playwright (chromium en /opt/pw-browsers/chromium): servidor e2e `npx vite --config vite.e2e.config.ts --port 5199` (en memoria: **reiniciar para cada suite que escribe estado**, p. ej. sync.py y tools.py); preview de producción `npx vite build && npx vite preview --port 5188` para `BASE=http://127.0.0.1:5188 python3 e2e/map.py`.
 - No matar procesos por nombre (`pkill -f`): ha tumbado el shell dos veces.
 - `/api/health`: WebFetch cachea 15 min por URL, usar `?check=N`.

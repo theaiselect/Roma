@@ -2,6 +2,7 @@ import { useRoute } from 'preact-iso';
 import { useState } from 'preact/hooks';
 import { Icon } from '@/components/Icon';
 import { Progress } from '@/components/Progress';
+import { ShowCard } from '@/components/ShowCard';
 import { dishes, menuWords } from '@/data/dishes';
 import { monuments } from '@/data/monuments';
 import { packing, nightBefore } from '@/data/packing';
@@ -17,6 +18,7 @@ import { BackTitle } from '@/screens/More';
 import { setCheck, useChecks } from '@/lib/checks';
 import { remove, save, useKind, type Entity } from '@/lib/db';
 import { buildIcs } from '@/lib/ics';
+import { useLocal } from '@/lib/local';
 import { isIOS } from '@/lib/maps';
 import { useTimeline } from '@/lib/plan-state';
 import { useSettings } from '@/lib/settings';
@@ -78,44 +80,42 @@ function Monuments() {
   );
 }
 
-/** Frases en italiano con voz (F30) y modo «Enseñar»: la frase en letra enorme para mostrársela a alguien. */
+/** Frases en italiano con voz (F30), favoritas (solo en este móvil) y modo «Enseñar»: la frase en letra enorme. */
 function Phrases() {
   const [noVoice, setNoVoice] = useState(false);
   const [q, setQ] = useState('');
   const [show, setShow] = useState<{ es: string; it: string } | null>(null);
+  const [favs, setFavs] = useLocal<string[]>('roma-fav-phrases', []);
   const ql = q.trim().toLowerCase();
+  const match = (p: { es: string; it: string }) => !ql || p.es.toLowerCase().includes(ql) || p.it.toLowerCase().includes(ql);
+  const toggle = (it: string) => setFavs(favs.includes(it) ? favs.filter((x) => x !== it) : [...favs, it]);
+  const row = (p: { es: string; it: string; say: string }) => (
+    <article key={p.it} class="card phrase">
+      <button type="button" class="phrase-main" onClick={() => void speakItalian(p.it).then((ok) => setNoVoice(!ok))}>
+        <span class="small muted">{p.es}</span>
+        <span lang="it" class="phrase-it"><Icon name="speaker" size={18} /> {p.it}</span>
+        <span class="small" style={{ color: 'var(--terracotta)' }}>{p.say}</span>
+      </button>
+      <div class="row">
+        <button type="button" class="btn" onClick={() => setShow({ es: p.es, it: p.it })}>Enseñar</button>
+        <button type="button" class="btn ghost" aria-pressed={favs.includes(p.it)} aria-label={favs.includes(p.it) ? `Quitar de favoritas: ${p.es}` : `Guardar como favorita: ${p.es}`} onClick={() => toggle(p.it)}>{favs.includes(p.it) ? '★' : '☆'}</button>
+      </div>
+    </article>
+  );
+  const favItems = phraseGroups.flatMap((g) => g.items).filter((p, i, all) => favs.includes(p.it) && all.findIndex((x) => x.it === p.it) === i && match(p));
   return (
     <div class="stack-lg">
       <BackTitle title="Frases en italiano" />
       {noVoice && <div class="alert"><Icon name="alert" /><span>Este móvil no tiene voz italiana instalada. {voiceHelp(isIOS())}</span></div>}
       <input type="search" placeholder="Buscar en español o en italiano" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Buscar frase" />
-      <p class="small muted">Toca una frase para oírla. «Enseñar» la pone en letra grande para que la lea quien tengas delante.</p>
+      <p class="small muted">Toca una frase para oírla. «Enseñar» la pone en letra grande para que la lea quien tengas delante. Con ☆ guardas las que más vayas a usar.</p>
+      {favItems.length > 0 && <section class="stack" aria-label="Favoritas"><h2>Favoritas</h2>{favItems.map(row)}</section>}
       {phraseGroups.map((g) => {
-        const items = g.items.filter((p) => !ql || p.es.toLowerCase().includes(ql) || p.it.toLowerCase().includes(ql));
+        const items = g.items.filter(match);
         if (!items.length) return null;
-        return (
-          <section key={g.id} class="stack">
-            <h2>{g.title}</h2>
-            {items.map((p) => (
-              <article key={p.it} class="card phrase">
-                <button type="button" class="phrase-main" onClick={() => void speakItalian(p.it).then((ok) => setNoVoice(!ok))}>
-                  <span class="small muted">{p.es}</span>
-                  <span lang="it" class="phrase-it"><Icon name="speaker" size={18} /> {p.it}</span>
-                  <span class="small" style={{ color: 'var(--terracotta)' }}>{p.say}</span>
-                </button>
-                <button type="button" class="btn" onClick={() => setShow({ es: p.es, it: p.it })}>Enseñar</button>
-              </article>
-            ))}
-          </section>
-        );
+        return <section key={g.id} class="stack"><h2>{g.title}</h2>{items.map(row)}</section>;
       })}
-      {show && (
-        <div class="showcard" role="dialog" aria-modal="true" aria-label="Frase en letra grande" onClick={() => setShow(null)}>
-          <p lang="it">{show.it}</p>
-          <p class="small">{show.es}</p>
-          <button type="button" class="btn" onClick={() => setShow(null)}>Cerrar</button>
-        </div>
-      )}
+      {show && <ShowCard it={show.it} es={show.es} onClose={() => setShow(null)} />}
     </div>
   );
 }
