@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { ElevationChart, MetroNear, StarButton } from '@/components/MapExtras';
+import { MetroNear, StarButton } from '@/components/MapExtras';
 import { RomaMap, type MapPin } from '@/components/RomaMap';
 import { Icon } from '@/components/Icon';
 import { PlaceFacts } from '@/components/StopCard';
@@ -26,7 +26,6 @@ import { cachedPois, EXTRA_GEO, extraGeo, footRoute, footRouteVia, footRoutes, f
 import { useLocal } from '@/lib/local';
 import { downloadMetro, useMetro } from '@/lib/metro-map';
 import { overpass } from '@/lib/offline-data';
-import { elevationProfile, type Profile } from '@/lib/relief';
 import { toggleSaved, useSaved, type SavedEntity } from '@/lib/saved';
 
 // Un color por día. Los mapas no entienden variables CSS, así que van en hexadecimal.
@@ -132,19 +131,6 @@ function localMatches(q: string, saved: SavedEntity[] = []): Found[] {
   return [...stars, ...plan];
 }
 
-/** Perfil de desnivel de cada ruta (con la malla guardada no necesita red). */
-function useProfiles(routes: Route[]): (Profile | null)[] {
-  const [out, setOut] = useState<(Profile | null)[]>([]);
-  useEffect(() => {
-    let alive = true;
-    setOut([]);
-    if (!routes.length) return;
-    void Promise.all(routes.map((r) => elevationProfile(r.coords).catch(() => null))).then((x) => { if (alive) setOut(x); });
-    return () => { alive = false; };
-  }, [routes]);
-  return out;
-}
-
 type Picked = { kind: 'stop'; stop: MapStop; day: DayNum } | { kind: 'heart'; pin: Pin } | { kind: 'poi'; item: NearItem; filter: Filter } | { kind: 'found'; found: Found } | { kind: 'hotel' };
 
 /** Altura aproximada (px) que tapa la ficha: la parada tocada se centra en la parte alta del mapa. */
@@ -168,7 +154,6 @@ export function MapScreen() {
   const [mapStyle, setMapStyle] = useLocal<'auto' | 'dark' | 'light'>('roma-map-style', 'auto');
   const dark = mapStyle === 'auto' ? appDark : mapStyle === 'dark';
   const DAY_HEX = dayHex(dark);
-  const [threeD, setThreeD] = useLocal('roma-3d', false);
   const [showMetro, setShowMetro] = useLocal('roma-metro', false);
   const metro = useMetro();
   const saved = useSaved();
@@ -206,9 +191,6 @@ export function MapScreen() {
   const [focus, setFocus] = useState<{ lat: number; lng: number; key: number; shiftY?: number } | null>(null);
   const memories = [...(useKind<Entity>('diary') ?? []), ...(useKind<Entity>('photo') ?? [])].filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number');
   const route = walk ?? dayPath?.route ?? null;
-  const profRoutes = useMemo(() => (walkAlts.length > 1 ? walkAlts : route ? [route] : []), [walkAlts, route]);
-  const profiles = useProfiles(profRoutes);
-  const routeProfile = walkAlts.length > 1 ? profiles[Math.max(0, walkAlts.indexOf(walk as Route))] : profiles[0];
 
   useEffect(() => {
     void cachedPois().then((c) => { if (c) { setPois(c.pois); setPoiAge(c.at); } });
@@ -479,7 +461,7 @@ export function MapScreen() {
         </>
       ) : (
         <div class={`mapwrap${navigating ? ' navmode' : ''}${sheetStop ? ' sheetopen' : ''}${dark ? ' mapdark' : ''}`}>
-          <RomaMap key={dark ? 'noche' : 'dia'} dark={dark} pins={mapPins} me={me} route={route} alts={navigating ? [] : walkAlts.flatMap((r, i) => (r === walk ? [] : [{ i, coords: r.coords }]))} onPickAlt={(i) => { const r = walkAlts[i]; if (r) setWalk(r); }} threeD={threeD} metro={showMetro ? metro : null} order={order} fitKey={`${day}|${nearOnMap ? filter : ''}`} focus={focus} heading={heading} follow={follow} onPick={onPick} onLongPress={(p) => void longPress(p)} onBackground={() => { if (picked?.kind === 'stop') setPicked(null); }} onUserMove={() => setFollow(false)} onFail={() => setFallback(true)} />
+          <RomaMap key={dark ? 'noche' : 'dia'} dark={dark} pins={mapPins} me={me} route={route} alts={navigating ? [] : walkAlts.flatMap((r, i) => (r === walk ? [] : [{ i, coords: r.coords }]))} onPickAlt={(i) => { const r = walkAlts[i]; if (r) setWalk(r); }} threeD={false} metro={showMetro ? metro : null} order={order} fitKey={`${day}|${nearOnMap ? filter : ''}`} focus={focus} heading={heading} follow={follow} onPick={onPick} onLongPress={(p) => void longPress(p)} onBackground={() => { if (picked?.kind === 'stop') setPicked(null); }} onUserMove={() => setFollow(false)} onFail={() => setFallback(true)} />
           {!navigating && !sheetStop && next && (
             <button type="button" class="nextchip" onClick={() => showStop(next, day as DayNum)} aria-label={`Siguiente parada: ${next.n}, ${next.title}`}>
               <span class="stopnum small" style={{ background: DAY_HEX[day as DayNum] }} aria-hidden="true">{next.n}</span>
@@ -505,7 +487,6 @@ export function MapScreen() {
           })()}
           {navigating && !follow && <button type="button" class="btn locate recenter" onClick={() => setFollow(true)}><Icon name="walk" /> Recentrar</button>}
           <div class="mapctl" role="group" aria-label="Capas del mapa">
-            <button type="button" class="btn" aria-pressed={threeD} onClick={() => setThreeD(!threeD)}>3D</button>
             <button type="button" class="btn" aria-pressed={!dark} aria-label="Mapa claro" onClick={() => setMapStyle(dark ? 'light' : 'dark')}>{dark ? '☀ Día' : '☾ Noche'}</button>
             <button type="button" class="btn" aria-pressed={showMetro} onClick={toggleMetro}><Icon name="train" size={16} /> Metro</button>
           </div>
@@ -528,18 +509,16 @@ export function MapScreen() {
           {walkAlts.length > 1 && !navigating && (
             <div class="altlist" role="group" aria-label="Rutas posibles">
               {walkAlts.map((r, i) => {
-                const pf = profiles[i];
                 return (
                   <button type="button" key={i} class="altchip" aria-pressed={r === walk} onClick={() => setWalk(r)}>
                     <b class="num">{formatDuration(r.durationS)}</b>
-                    <span class="small muted num">{formatDistance(r.distanceM)}{pf ? ` · ↑${pf.ascent} m` : ''}</span>
+                    <span class="small muted num">{formatDistance(r.distanceM)}</span>
                     <span class="small">{i === 0 ? 'Recomendada' : `Alternativa ${i}`}</span>
                   </button>
                 );
               })}
             </div>
           )}
-          <ElevationChart p={routeProfile} />
           {dest && !navigating && walk && <button type="button" class="btn primary" onClick={startNav}><Icon name="walk" /> Empezar a caminar</button>}
           {legStops && (
             <ol class="legs">

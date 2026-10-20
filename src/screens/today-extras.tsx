@@ -219,6 +219,7 @@ export function TripForecast() {
 
 // Bloques extra de «Hoy»: tiempo, atardecer, entradas, último metro, lluvia, encuentro, noche anterior y pregunta del día.
 export function TodayExtras({ now, day }: { now: number; day: DayNum | null }) {
+  const organizer = useSettings().profile !== 'lucia';
   const p = romeParts(now);
   const metro = lastMetroWarning(now);
   const info = day ? days.find((d) => d.day === day) : undefined;
@@ -231,8 +232,9 @@ export function TodayExtras({ now, day }: { now: number; day: DayNum | null }) {
   return (
     <>
       <TicketsSoon now={now} />
-      <BackupReminderCard now={now} />
-      <OpenReservationsCard now={now} />
+      {/* Avisos de organizar el viaje: solo para Jesús (en el móvil de Lucía la app es un regalo, no una lista de tareas). */}
+      {organizer && <BackupReminderCard now={now} />}
+      {organizer && <OpenReservationsCard now={now} />}
       {sunsetSoon && <div class="alert info"><Icon name="sun" /><span>El atardecer es a las {romeParts(sunset!).time}: en {Math.round((sunset! - now) / 60_000)} min.</span></div>}
       {metro && <div class="alert"><Icon name="train" /><span>{metro} Si no, taxi o a pie.</span></div>}
       {info && <WeatherCard date={info.date} />}

@@ -6,7 +6,7 @@ import { buildGraph, fromStored, routeLeg, snap, toStored, type Graph, type Offl
 import { downloadRoma, mapDownloadInfo, mapIsCurrent, type MapDownload } from '@/lib/offline-map';
 import { downloadMetro, cachedMetro } from '@/lib/metro-map';
 import { extraGeo, EXTRA_GEO, refreshPois, resolveExtraGeo, ROME_BBOX, ROME_CENTER, type Found } from '@/lib/osm';
-import { downloadRelief, reliefInfo } from '@/lib/relief';
+import { reliefInfo } from '@/lib/relief';
 import { ensureBlob } from '@/lib/sync';
 import { forecastCached, refreshForecast } from '@/lib/weather';
 import { downloadWiki, wikiStatus } from '@/lib/wiki';
@@ -324,7 +324,7 @@ export async function prepareOffline(onStage: (s: Stage, done: number, total: nu
   });
   await run('pois', async () => { if (!(await refreshPois(true))) throw new Error('pois'); });
   await run('metro', () => downloadMetro((q) => overpass(q, 60_000)));
-  await run('relief', () => downloadRelief((d, t) => onStage('relief', d, t)));
+  // El relieve (desnivel) ya no se descarga: se quitó del mapa.
   await run('photos', () => downloadWiki((d, t) => onStage('photos', d, t)));
   await run('weather', async () => { if (!(await refreshForecast())) throw new Error('weather'); });
   await run('files', async () => { const r = await downloadBlobs((d, t) => onStage('files', d, t)); if (r.failed) throw new Error('files'); });

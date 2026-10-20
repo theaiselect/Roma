@@ -1,3 +1,4 @@
+import { useSettings } from '@/lib/settings';
 import { useState } from 'preact/hooks';
 import { Icon, type IconName } from '@/components/Icon';
 
@@ -10,7 +11,8 @@ export function BackTitle({ title, back = '/mas' }: { title: string; back?: stri
   );
 }
 
-export const moreItems: { href: string; label: string; icon: IconName }[] = [
+/** `organizer`: herramientas de preparar el viaje; solo salen en el móvil de Jesús (la app es un regalo para Lucía). */
+export const moreItems: { href: string; label: string; icon: IconName; organizer?: true }[] = [
   { href: '/mas/reservas', label: 'Reservas y entradas', icon: 'ticket' },
   { href: '/mas/gastos', label: 'Gastos', icon: 'euro' },
   { href: '/mas/monumentos', label: 'Monumentos', icon: 'monument' },
@@ -20,17 +22,18 @@ export const moreItems: { href: string; label: string; icon: IconName }[] = [
   { href: '/mas/frases', label: 'Frases en italiano', icon: 'speaker' },
   { href: '/mas/audioguia', label: 'Audioguía y leyendas', icon: 'monument' },
   { href: '/mas/emergencias', label: 'Emergencias y salud', icon: 'sos' },
-  { href: '/mas/maleta', label: 'Maleta y noche anterior', icon: 'bag' },
-  { href: '/mas/normas', label: 'Normas y multas', icon: 'rule' },
+  { href: '/mas/maleta', label: 'Maleta y noche anterior', icon: 'bag', organizer: true },
+  { href: '/mas/normas', label: 'Normas y multas', icon: 'rule', organizer: true },
   { href: '/mas/regalos', label: 'Regalos', icon: 'gift' },
-  { href: '/mas/calendario', label: 'Calendario (.ics)', icon: 'calendar' },
+  { href: '/mas/calendario', label: 'Calendario (.ics)', icon: 'calendar', organizer: true },
   { href: '/mas/ajustes', label: 'Ajustes', icon: 'settings' },
 ];
 
 export function More() {
   const [q, setQ] = useState('');
   const n = q.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const items = moreItems.filter((i) => !n || i.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(n));
+  const organizer = useSettings().profile !== 'lucia';
+  const items = moreItems.filter((i) => (organizer || !i.organizer) && (!n || i.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(n)));
   return (
     <div class="stack-lg">
       <div class="page-title"><h1>Más</h1></div>

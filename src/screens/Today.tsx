@@ -92,7 +92,7 @@ export function Today() {
           {settings.profile === 'jesus' && <p class="small muted">Lucía llega a Termini el viernes a las {luciaTrain.arrivesTermini}.</p>}
         </section>
         <Reunion tl={tl} now={now} profile={settings.profile} />
-        <ReadyAlert />
+        {settings.profile !== 'lucia' && <ReadyAlert />}
         <TripForecast />
         {state.next && (
           <section class="stack">
@@ -161,7 +161,7 @@ export function Today() {
       </section>
 
       <AlertList alerts={alerts} />
-      <ReadyAlert />
+      {settings.profile !== 'lucia' && <ReadyAlert />}
 
       <DayLine stops={dayStops} now={now} nextId={next.id} />
 

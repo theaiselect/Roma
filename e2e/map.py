@@ -134,12 +134,8 @@ with sync_playwright() as p:
     pg.get_by_role('button',name='Cerrar la ficha').click(); pg.wait_for_timeout(300)
     pg.get_by_label('Buscar un sitio').fill(WIKI_TITLES[0][:4]); pg.wait_for_timeout(500)
     pg.get_by_label('Buscar un sitio').fill('')
-    # 3D
-    pg.get_by_role('group',name='Capas del mapa').get_by_role('button',name='3D',exact=True).click(); pg.wait_for_timeout(1500)
-    check('3D: capa de edificios encendida y mapa inclinado', pg.evaluate("window.__romaMap.getLayer('buildings-3d')&&window.__romaMap.getLayoutProperty('buildings-3d','visibility')")=='visible' and pg.evaluate("window.__romaMap.getPitch()")>40)
-    pg.screenshot(path='/tmp/map-3d.png')
-    pg.get_by_role('group',name='Capas del mapa').get_by_role('button',name='3D',exact=True).click(); pg.wait_for_timeout(1200)
-    check('3D: al apagarlo vuelve a plano', pg.evaluate("window.__romaMap.getLayoutProperty('buildings-3d','visibility')")=='none' and pg.evaluate("window.__romaMap.getPitch()")<5)
+    # 3D: quitado del mapa (20 oct)
+    check('3D: ya no hay botón 3D', pg.get_by_role('group',name='Capas del mapa').get_by_role('button',name='3D',exact=True).count()==0)
     # Metro
     pg.get_by_role('group',name='Capas del mapa').get_by_role('button',name=re.compile('Metro')).click(); pg.wait_for_timeout(1500)
     ml=pg.evaluate("window.__romaMap.getSource('metro-lines').serialize().data.features.length"); ms=pg.evaluate("window.__romaMap.getSource('metro-stations').serialize().data.features.length")
@@ -185,9 +181,7 @@ with sync_playwright() as p:
     c1=pg.evaluate("window.__romaMap.getSource('route').serialize().data.geometry.coordinates[1][0]")
     check('ruta: elegir la alternativa la dibuja como principal', abs(c1-12.4790)<1e-6 and pg.locator('.altchip').nth(1).get_attribute('aria-pressed')=='true' and pg.get_by_text('1,5 km').count()>0)
     pg.locator('.altchip').first.click(); pg.wait_for_timeout(500)
-    try: pg.wait_for_selector('.elev',timeout=5000)
-    except Exception: pass
-    check('ruta: desnivel (sube/baja) con perfil dibujado', pg.locator('.elev').count()==1 and re.search(r'↑ \d+ m · ↓ \d+ m|Ruta llana', pg.locator('.elev').inner_text()) is not None and pg.locator('.elev polyline').count()==1)
+    check('ruta: ya no se dibuja el desnivel', pg.locator('.elev').count()==0)
     pg.screenshot(path='/tmp/map2.png')
     check('ruta: indicaciones en español', pg.get_by_text(re.compile('Ver las 3 indicaciones')).count()>0)
     pg.get_by_text(re.compile('Ver las 3 indicaciones')).click()
@@ -238,7 +232,6 @@ with sync_playwright() as p:
     pg.get_by_role('button',name='Ruta a pie',exact=True).click(); pg.wait_for_timeout(1500)
     check('sin conexión: calcula la ruta a pie con las calles guardadas', pg.get_by_text('sin conexión').count()>0 and pg.evaluate("window.__romaMap.querySourceFeatures('route').length")>0)
     pg.screenshot(path='/tmp/map-offline.png')
-    check('sin conexión: el desnivel sale de la malla de altitudes guardada', pg.locator('.elev').count()==1)
     pg.get_by_role('button',name='Quitar ruta').first.click(); pg.wait_for_timeout(300)
     ctx.set_geolocation({'latitude':41.9120,'longitude':12.4900})
     pg.evaluate("(()=>{const m=window.__romaMap;m.jumpTo({center:[12.4906,41.9064],zoom:17})})()"); pg.wait_for_timeout(800)

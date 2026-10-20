@@ -62,7 +62,7 @@ export function readinessChecks(i: ReadyInput): Check[] {
 
   const offOk = i.missing.length === 0;
   out.push({ id: 'offline', critical: true, ok: offOk, title: 'Roma guardada sin conexión',
-    detail: offOk ? 'Mapa, calles, sitios, metro, relieve y fotos están guardados.' : `Falta: ${i.missing.map((s) => STAGE_LABEL[s].toLowerCase()).join(', ')}.`, fix: offOk ? undefined : 'download' });
+    detail: offOk ? 'Mapa, calles, sitios, metro y fotos están guardados.' : `Falta: ${i.missing.map((s) => STAGE_LABEL[s].toLowerCase()).join(', ')}.`, fix: offOk ? undefined : 'download' });
 
   const un = i.unshared ?? 0;
   out.push({ id: 'files', critical: true, ok: un === 0, title: 'Archivos compartidos',

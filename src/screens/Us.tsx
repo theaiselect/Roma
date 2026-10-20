@@ -17,7 +17,6 @@ const sections: { id: string; label: string; icon: IconName }[] = [
   { id: 'cartas', label: 'Cartas', icon: 'mail' },
   { id: 'capsula', label: 'Cápsula', icon: 'clock' },
   { id: 'votos', label: 'Votos', icon: 'vote' },
-  { id: 'postal', label: 'Postal', icon: 'share' },
   { id: 'cancion', label: 'Canción', icon: 'music' },
   { id: 'libro', label: 'Nuestro viaje', icon: 'star' },
 ];
