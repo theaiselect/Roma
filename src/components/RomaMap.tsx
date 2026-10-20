@@ -3,21 +3,26 @@ import type { Map as MlMap, GeoJSONSource, LngLatBoundsLike } from 'maplibre-gl'
 import type { LatLng } from '@/lib/geo';
 import { ROME_CENTER, STYLE_URL, type Route } from '@/lib/osm';
 
-export type PinKind = 'stop' | 'heart' | 'poi' | 'hotel' | 'found';
-export interface MapPin { id: string; lat: number; lng: number; kind: PinKind; color: string; short: string; label: string }
+export type PinKind = 'stop' | 'dot' | 'heart' | 'poi' | 'hotel' | 'found';
+export type PinStatus = 'todo' | 'done' | 'now' | 'next';
+export interface MapPin { id: string; lat: number; lng: number; kind: PinKind; color: string; short: string; label: string; status?: PinStatus; name?: string }
 
 interface Props {
   pins: MapPin[];
   me: LatLng | null;
   route: Route | null;
+  /** Recorrido del día en línea de puntos (sin calles) mientras no hay ruta a pie calculada. */
+  order: { coords: [number, number][]; color: string } | null;
   /** Cambia cuando hay que reencuadrar (otro día, otro filtro). */
   fitKey: string;
-  focus: { lat: number; lng: number; key: number } | null;
+  focus: { lat: number; lng: number; key: number; shiftY?: number } | null;
   /** Rumbo en grados (si el móvil lo da) y modo seguimiento: la cámara te sigue, inclinada y girada hacia donde miras. */
   heading: number | null;
   follow: boolean;
   onPick: (id: string) => void;
   onLongPress: (p: LatLng) => void;
+  /** Toque en el mapa vacío (cierra la ficha). */
+  onBackground: () => void;
   /** El usuario movió el mapa con el dedo: sale del modo seguimiento. */
   onUserMove: () => void;
   onFail: () => void;
@@ -67,38 +72,39 @@ function webgl(): boolean {
 }
 
 /** Mapa vectorial interactivo (OpenFreeMap). Se carga bajo demanda: MapLibre pesa ~250 KB comprimido. */
-export function RomaMap({ pins, me, route, fitKey, focus, heading, follow, onPick, onLongPress, onUserMove, onFail }: Props) {
+export function RomaMap({ pins, me, route, order, fitKey, focus, heading, follow, onPick, onLongPress, onBackground, onUserMove, onFail }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const ready = useRef(false);
-  const latest = useRef({ pins, me, route, fitKey, heading });
-  latest.current = { pins, me, route, fitKey, heading };
+  const latest = useRef({ pins, me, route, order, fitKey, heading });
+  latest.current = { pins, me, route, order, fitKey, heading };
   const pick = useRef(onPick);
   pick.current = onPick;
-  const cb = useRef({ onLongPress, onUserMove });
-  cb.current = { onLongPress, onUserMove };
+  const cb = useRef({ onLongPress, onUserMove, onBackground });
+  cb.current = { onLongPress, onUserMove, onBackground };
   const following = useRef(follow);
   following.current = follow;
 
   const paint = () => {
     const m = map.current;
     if (!m || !ready.current) return;
-    const { pins: ps, me: pos, route: r } = latest.current;
+    const { pins: ps, me: pos, route: r, order: ord } = latest.current;
     (m.getSource('pins') as GeoJSONSource).setData({
       type: 'FeatureCollection',
-      features: ps.map((p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] }, properties: { id: p.id, kind: p.kind, color: p.color, short: p.short } })),
+      features: ps.map((p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] }, properties: { id: p.id, kind: p.kind, color: p.color, short: p.short, status: p.status ?? 'todo', name: p.name ?? '' } })),
     });
     (m.getSource('me') as GeoJSONSource).setData(pos ? { type: 'Feature', geometry: { type: 'Point', coordinates: [pos.lng, pos.lat] }, properties: { heading: latest.current.heading ?? -1 } } : empty);
+    (m.getSource('order') as GeoJSONSource).setData(ord && ord.coords.length > 1 ? { type: 'Feature', geometry: { type: 'LineString', coordinates: ord.coords }, properties: { color: ord.color } } : empty);
     (m.getSource('route') as GeoJSONSource).setData(r ? { type: 'Feature', geometry: { type: 'LineString', coordinates: r.coords }, properties: {} } : empty);
   };
 
   const fit = (m: MlMap) => {
     const { pins: ps, me: pos, route: r } = latest.current;
-    const pts: [number, number][] = r ? r.coords : [...ps.filter((p) => p.kind !== 'heart').map((p) => [p.lng, p.lat] as [number, number]), ...(pos ? [[pos.lng, pos.lat] as [number, number]] : [])];
+    const pts: [number, number][] = r ? r.coords : [...ps.filter((p) => p.kind !== 'heart' && p.kind !== 'poi').map((p) => [p.lng, p.lat] as [number, number]), ...(pos ? [[pos.lng, pos.lat] as [number, number]] : [])];
     if (!pts.length) return;
     const lngs = pts.map((p) => p[0]), lats = pts.map((p) => p[1]);
     const b: LngLatBoundsLike = [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]];
-    m.fitBounds(b, { padding: { top: 50, bottom: 50, left: 40, right: 40 }, maxZoom: 16, duration: 600 });
+    m.fitBounds(b, { padding: { top: 84, bottom: 56, left: 40, right: 40 }, maxZoom: 16, duration: 600 });
   };
 
   useEffect(() => {
@@ -126,18 +132,31 @@ export function RomaMap({ pins, me, route, fitKey, focus, heading, follow, onPic
         m.addImage('heart', heartImage('#C0583A'), { pixelRatio: 2 });
         m.addImage('arrow', arrowImage(), { pixelRatio: 2 });
         m.addSource('route', { type: 'geojson', data: empty });
+        m.addSource('order', { type: 'geojson', data: empty });
         m.addSource('pins', { type: 'geojson', data: empty });
         m.addSource('me', { type: 'geojson', data: empty });
+        m.addLayer({ id: 'order-line', type: 'line', source: 'order', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 3.5, 'line-opacity': 0.85, 'line-dasharray': [1.2, 1.8] } });
         m.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#fff', 'line-width': 9 } });
         m.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#4A7FA8', 'line-width': 5 } });
-        m.addLayer({ id: 'pins-circle', type: 'circle', source: 'pins', filter: ['in', ['get', 'kind'], ['literal', ['stop', 'hotel', 'found', 'poi']]],
-          paint: { 'circle-color': ['get', 'color'], 'circle-radius': ['match', ['get', 'kind'], 'poi', 7, 'hotel', 12, 11], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 } });
-        m.addLayer({ id: 'pins-hearts', type: 'symbol', source: 'pins', filter: ['==', ['get', 'kind'], 'heart'], layout: { 'icon-image': 'heart', 'icon-size': 0.55, 'icon-allow-overlap': true } });
+        // Aro suave alrededor de la parada en curso o la siguiente: se ve de un vistazo «por dónde vamos».
+        m.addLayer({ id: 'pins-halo', type: 'circle', source: 'pins', filter: ['in', ['get', 'status'], ['literal', ['now', 'next']]],
+          paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.28, 'circle-radius': 24 } });
+        m.addLayer({ id: 'pins-circle', type: 'circle', source: 'pins', filter: ['in', ['get', 'kind'], ['literal', ['stop', 'dot', 'hotel', 'found', 'poi']]],
+          paint: {
+            'circle-color': ['case', ['==', ['get', 'status'], 'done'], '#A89F97', ['get', 'color']],
+            'circle-radius': ['match', ['get', 'kind'], 'poi', 7, 'dot', 5.5, 'hotel', 13, ['match', ['get', 'status'], 'now', 17, 'next', 17, 14]],
+            'circle-stroke-color': '#fff', 'circle-stroke-width': ['match', ['get', 'kind'], 'dot', 1.5, 2.5],
+          } });
+        m.addLayer({ id: 'pins-hearts', type: 'symbol', source: 'pins', filter: ['==', ['get', 'kind'], 'heart'], layout: { 'icon-image': 'heart', 'icon-size': 0.5, 'icon-allow-overlap': true } });
         m.addLayer({ id: 'pins-label', type: 'symbol', source: 'pins', filter: ['!=', ['get', 'short'], ''],
-          layout: { 'text-field': ['get', 'short'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-allow-overlap': true },
+          layout: { 'text-field': ['get', 'short'], 'text-font': ['Noto Sans Bold'], 'text-size': ['match', ['get', 'status'], 'now', 16, 'next', 16, 14], 'text-allow-overlap': true, 'text-ignore-placement': true },
           paint: { 'text-color': '#fff' } });
-        m.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-color': '#4A7FA8', 'circle-opacity': 0.22, 'circle-radius': 20 } });
-        m.addLayer({ id: 'me-dot', type: 'circle', source: 'me', paint: { 'circle-color': '#4A7FA8', 'circle-radius': 8, 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } });
+        // Nombre de la parada solo al acercarse: de lejos solo números, para no saturar.
+        m.addLayer({ id: 'pins-name', type: 'symbol', source: 'pins', minzoom: 15.2, filter: ['all', ['==', ['get', 'kind'], 'stop'], ['!=', ['get', 'name'], '']],
+          layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 11.5, 'text-anchor': 'top', 'text-offset': [0, 1.5], 'text-max-width': 9 },
+          paint: { 'text-color': '#2B2522', 'text-halo-color': '#fff', 'text-halo-width': 1.8 } });
+        m.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-color': '#4A7FA8', 'circle-opacity': 0.22, 'circle-radius': 26 } });
+        m.addLayer({ id: 'me-dot', type: 'circle', source: 'me', paint: { 'circle-color': '#4A7FA8', 'circle-radius': 9, 'circle-stroke-color': '#fff', 'circle-stroke-width': 3.5 } });
         // Flecha de rumbo sobre el punto azul: gira con la dirección en la que caminas.
         m.addLayer({ id: 'me-arrow', type: 'symbol', source: 'me', filter: ['>=', ['get', 'heading'], 0],
           layout: { 'icon-image': 'arrow', 'icon-size': 0.5, 'icon-rotate': ['get', 'heading'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map', 'icon-offset': [0, -22], 'icon-allow-overlap': true } });
@@ -152,6 +171,7 @@ export function RomaMap({ pins, me, route, fitKey, focus, heading, follow, onPic
         for (const ev of ['touchend', 'touchmove', 'touchcancel', 'zoomstart', 'rotatestart', 'pitchstart'] as const) m.on(ev, cancel);
         m.on('contextmenu', (e) => cb.current.onLongPress({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
         m.on('dragstart', (e) => { if ((e as unknown as { originalEvent?: unknown }).originalEvent && following.current) cb.current.onUserMove(); });
+        m.on('click', (e) => { if (!m.queryRenderedFeatures(e.point, { layers: ['pins-circle', 'pins-hearts'] }).length) cb.current.onBackground(); });
         for (const id of ['pins-circle', 'pins-hearts']) {
           m.on('click', id, (e) => { const f = e.features?.[0]; if (f) pick.current(String(f.properties.id)); });
           m.on('mouseenter', id, () => { m.getCanvas().style.cursor = 'pointer'; });
@@ -170,7 +190,7 @@ export function RomaMap({ pins, me, route, fitKey, focus, heading, follow, onPic
     };
   }, []);
 
-  useEffect(paint, [pins, me, route]);
+  useEffect(paint, [pins, me, route, order]);
   useEffect(() => { if (map.current && ready.current && !follow) fit(map.current); }, [fitKey, route]);
   // Seguimiento: la cámara va contigo, inclinada y mirando hacia donde caminas. Al salir, vuelve a plano y al norte.
   useEffect(() => {
@@ -179,7 +199,7 @@ export function RomaMap({ pins, me, route, fitKey, focus, heading, follow, onPic
     if (follow && me) m.easeTo({ center: [me.lng, me.lat], zoom: Math.max(m.getZoom(), 17), pitch: 55, bearing: heading ?? m.getBearing(), duration: 700, essential: true });
     else if (!follow && m.getPitch() > 0) m.easeTo({ pitch: 0, bearing: 0, duration: 500 });
   }, [follow, me?.lat, me?.lng, heading]);
-  useEffect(() => { if (focus && map.current && ready.current) map.current.flyTo({ center: [focus.lng, focus.lat], zoom: Math.max(map.current.getZoom(), 16), duration: 700 }); }, [focus?.key]);
+  useEffect(() => { if (focus && map.current && ready.current) map.current.flyTo({ center: [focus.lng, focus.lat], zoom: Math.max(map.current.getZoom(), 16), duration: 700, offset: [0, -(focus.shiftY ?? 0)] }); }, [focus?.key]);
 
   return <div ref={box} class="romamap" role="application" aria-label="Mapa de Roma" />;
 }

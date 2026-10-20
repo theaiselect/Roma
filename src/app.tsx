@@ -2,6 +2,7 @@ import { ErrorBoundary, LocationProvider, Route, Router, lazy, useLocation } fro
 import { useRegisterSW } from 'virtual:pwa-register/preact';
 import { Icon, type IconName } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { LostButton } from '@/components/Lost';
 import { TicketViewer } from '@/components/TicketViewer';
 import { isSimulated, stopSimulation } from '@/lib/clock';
@@ -65,6 +66,7 @@ function Shell({ needRefresh, updateServiceWorker }: { needRefresh: boolean; upd
         <a href="/" style={{ textDecoration: 'none' }} aria-label="Hoy"><Logo /></a>
         <SyncDot />
       </header>
+      <OfflineBanner />
       <main class="content">
         <ErrorBoundary>
           <Router>

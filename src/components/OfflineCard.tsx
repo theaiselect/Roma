@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { Icon } from '@/components/Icon';
-import { offlineStatus, prepareOffline, STAGE_LABEL, type OfflineStatus, type Stage } from '@/lib/offline-data';
+import { offlineStatus, STAGE_LABEL, type OfflineStatus, type Stage } from '@/lib/offline-data';
+import { runAuto, useAutoOffline } from '@/lib/auto-offline';
 import { estimateMB } from '@/lib/offline-map';
 
 function useOnline(): boolean {
@@ -31,22 +32,18 @@ export function rows(s: OfflineStatus): Row[] {
 
 export function OfflineCard() {
   const [st, setSt] = useState<OfflineStatus | undefined>();
-  const [cur, setCur] = useState<{ stage: Stage; done: number; total: number } | null>(null);
-  const [failed, setFailed] = useState<Stage[]>([]);
+  const auto = useAutoOffline();
+  const cur = auto.phase === 'running' ? { stage: auto.stage ?? 'map', done: auto.done, total: auto.total } : null;
+  const failed = auto.phase === 'error' ? auto.failed : [];
   const online = useOnline();
   const refresh = () => offlineStatus().then(setSt).catch(() => undefined);
-  useEffect(() => { void refresh(); }, []);
-  const go = async () => {
-    setFailed([]);
-    setCur({ stage: 'map', done: 0, total: 1 });
-    const bad = await prepareOffline((stage, done, total) => setCur({ stage, done, total }));
-    setFailed(bad); setCur(null); await refresh();
-  };
+  useEffect(() => { void refresh(); }, [auto.phase]);
+  const go = () => void runAuto(true);
   const all = st ? rows(st).every((r) => r.ok) : false;
   return (
     <section class="card stack" style={{ gap: '0.5rem' }} aria-label="Preparar para ir sin conexión">
       <h2>Sin conexión</h2>
-      <p class="small">{all ? 'Todo listo: sin datos podéis ver el mapa, calcular rutas, buscar sitios y abrir las entradas.' : 'Con wifi, antes de salir, descarga todo lo que necesitas en Roma. Se hace una vez.'}</p>
+      <p class="small">{all ? 'Todo listo: sin datos podéis ver el mapa, calcular rutas, buscar sitios y abrir las entradas.' : auto.phase === 'waiting-wifi' ? 'Se descargará sola en cuanto haya wifi (o pulsa el botón).' : 'Se descarga sola, en segundo plano, cuando hay conexión. No tienes que hacer nada.'}</p>
       {st && (
         <ul class="list" style={{ gap: '0.25rem' }}>
           {rows(st).map((r) => (
@@ -63,9 +60,9 @@ export function OfflineCard() {
           <progress value={cur.done} max={cur.total} aria-label="Descargando" style={{ width: '100%' }} />
         </div>
       )}
-      {failed.length > 0 && <p class="small pending">No se ha podido descargar: {failed.map((f) => STAGE_LABEL[f]).join(', ')}. Vuelve a pulsar con mejor conexión.</p>}
-      <button type="button" class="btn primary" disabled={!!cur || !online} onClick={() => void go()}>
-        <Icon name="map" /> {cur ? 'Descargando…' : all ? 'Actualizar todo' : 'Preparar para ir sin conexión'}
+      {failed.length > 0 && <p class="small pending">No se ha podido descargar: {failed.map((f) => STAGE_LABEL[f]).join(', ')}. Se reintentará sola; también puedes pulsar el botón.</p>}
+      <button type="button" class="btn primary" disabled={!!cur || !online} onClick={go}>
+        <Icon name="map" /> {cur ? 'Descargando…' : all ? 'Actualizar todo' : 'Descargar ahora'}
       </button>
       {!online && <p class="small muted">Sin conexión ahora mismo.</p>}
       <p class="small muted">Sincronizar con Lucía y abrir cartas o la cápsula del tiempo sí necesitan conexión: el servidor guarda cada sorpresa hasta su hora.</p>

@@ -7,7 +7,7 @@ import { offlineRoute, reverseOffline, searchOffline } from '@/lib/offline-data'
 import { distanceM, type LatLng } from '@/lib/geo';
 import { parseSteps, type OsrmStep, type Step } from '@/lib/nav';
 
-export const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+export const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 /** Centro histórico y alrededores del hotel, Vaticano, Trastevere, Coliseo y Villa Borghese. */
 export const ROME_BBOX = { west: 12.40, south: 41.84, east: 12.57, north: 41.95 } as const;
 /** Zona que se descarga para el mapa sin conexión: Roma entera y el aeropuerto de Fiumicino. */

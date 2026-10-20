@@ -268,3 +268,28 @@ input[type='search']::-webkit-search-cancel-button { -webkit-appearance: none; }
 
 /* ── Plan: casilla «hecho» en cada parada ──────────────────── */
 .stopcheck { width: 28px; height: 28px; accent-color: var(--pino); margin: 0.5rem 0 0; }
+
+/* ── Mapa: números, ficha de la parada y «siguiente» ─────────── */
+.stopnum { display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; color: #fff; font: 700 1.05rem/1 var(--font-sans, system-ui); border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.stopnum.small { width: 28px; height: 28px; font-size: 0.9rem; }
+.stopsheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; display: grid; gap: 0.55rem; max-height: 62%; overflow: auto; overscroll-behavior: contain; padding: 0.85rem 0.9rem calc(0.9rem + env(safe-area-inset-bottom) * 0); background: var(--tarjeta); color: var(--tinta); border-radius: 18px 18px var(--radius) var(--radius); box-shadow: 0 -6px 22px rgba(0,0,0,0.28); }
+.stopsheet-head { display: grid; grid-template-columns: auto 1fr auto; gap: 0.7rem; align-items: start; }
+.stopsheet-title h2 { font-size: 1.2rem; line-height: 1.2; margin: 0; }
+.mapwrap.sheetopen .romamap { height: min(82vh, 700px); }
+.mapwrap.sheetopen .locate { display: none; }
+.nextchip { position: absolute; top: 10px; left: 10px; right: 56px; z-index: 3; display: flex; align-items: center; gap: 0.6rem; text-align: left; padding: 0.45rem 0.7rem 0.45rem 0.5rem; border-radius: 999px; border: 1px solid var(--linea); background: var(--tarjeta); color: var(--tinta); box-shadow: var(--sombra); font: inherit; min-height: 48px; }
+.nextchip-text { display: grid; line-height: 1.2; min-width: 0; }
+.nextchip-text b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.92rem; }
+
+.offlinebar { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem var(--gutter, 1rem); font-size: 0.82rem; background: color-mix(in srgb, var(--ocra) 22%, var(--tarjeta)); border-bottom: 1px solid var(--linea); }
+.offlinebar.ok { background: color-mix(in srgb, var(--pino) 20%, var(--tarjeta)); }
+.offlinebar .btn { min-height: 32px; padding: 0 0.6rem; margin-left: auto; }
+
+/* ── Toque romántico ────────────────────────────────────────── */
+.heartburst { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
+.heartburst span { position: absolute; bottom: -1.5rem; color: var(--terracotta); opacity: 0; animation: heartrise 2s ease-out forwards; }
+@keyframes heartrise { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 20% { opacity: 0.95; } 100% { transform: translateY(-9rem) scale(1.1) rotate(-8deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .heartburst { display: none; } }
+.arrival { position: relative; display: grid; gap: 0.5rem; padding: 1rem; border-radius: var(--radius); overflow: hidden; background: color-mix(in srgb, var(--rosa-romano) 26%, var(--tarjeta)); border: 1px solid color-mix(in srgb, var(--terracotta) 40%, var(--linea)); box-shadow: var(--sombra); }
+.arrival h2 { margin: 0; }
+.arrival-line { font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.25; margin: 0; }

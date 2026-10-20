@@ -305,10 +305,10 @@ export const STAGE_LABEL: Record<Stage, string> = {
 };
 
 /** Lo descarga todo, etapa a etapa. Una etapa que falla no impide las demás; devuelve las que fallaron. */
-export async function prepareOffline(onStage: (s: Stage, done: number, total: number) => void, signal?: AbortSignal): Promise<Stage[]> {
+export async function prepareOffline(onStage: (s: Stage, done: number, total: number) => void, signal?: AbortSignal, only?: readonly Stage[]): Promise<Stage[]> {
   const failed: Stage[] = [];
   const run = async (s: Stage, fn: () => Promise<unknown>) => {
-    if (signal?.aborted) return;
+    if (signal?.aborted || (only && !only.includes(s))) return;
     onStage(s, 0, 1);
     try { await fn(); } catch (e) { console.warn('offline', s, e); failed.push(s); }
   };
