@@ -11,6 +11,7 @@ import { formatDuration, nowState, type TimedStop } from '@/lib/schedule';
 import { useTimeline } from '@/lib/plan-state';
 import { daysUntil, romeParts, romeToUtc, weekdayOf } from '@/lib/time';
 import type { Who } from '@/data/types';
+import { ReadyAlert } from '@/components/Readiness';
 import { TodayExtras, TripForecast } from '@/screens/today-extras';
 
 
@@ -91,6 +92,7 @@ export function Today() {
           {settings.profile === 'jesus' && <p class="small muted">Lucía llega a Termini el viernes a las {luciaTrain.arrivesTermini}.</p>}
         </section>
         <Reunion tl={tl} now={now} profile={settings.profile} />
+        <ReadyAlert />
         <TripForecast />
         {state.next && (
           <section class="stack">
@@ -159,6 +161,7 @@ export function Today() {
       </section>
 
       <AlertList alerts={alerts} />
+      <ReadyAlert />
 
       <DayLine stops={dayStops} now={now} nextId={next.id} />
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { OfflineCard } from '@/components/OfflineCard';
+import { ReadinessCard } from '@/components/Readiness';
 import { travellers } from '@/data/trip';
 import type { Who } from '@/data/types';
 import { BackTitle } from '@/screens/More';
@@ -62,7 +63,7 @@ function Status() {
 export function SettingsScreen() {
   const s = useSettings();
   const [lastBackup] = useLocal<number | null>('roma-last-backup', null);
-  useEffect(() => { if (location.hash === '#copia') document.getElementById('copia')?.scrollIntoView({ block: 'start' }); }, []);
+  useEffect(() => { const id = location.hash.slice(1); if (id === 'copia' || id === 'listo') document.getElementById(id)?.scrollIntoView({ block: 'start' }); }, []);
   const [code, setCode] = useState(s.tripCode ?? '');
   const [showCode, setShowCode] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -84,6 +85,7 @@ export function SettingsScreen() {
   return (
     <div class="stack-lg">
       <BackTitle title="Ajustes" />
+      <ReadinessCard />
       <section class="card stack">
         <h2>Perfil</h2>
         <Seg label="Perfil" value={profile} options={(Object.keys(travellers) as Who[]).map((w) => [w, travellers[w].name])} onChange={(v) => {
@@ -97,7 +99,7 @@ export function SettingsScreen() {
         <Seg label="Tema" value={s.theme} options={[['auto', 'Automático'], ['light', 'Día (marfil)'], ['dark', 'Noche (por defecto)']]} onChange={(v) => updateSettings({ theme: v })} />
         <Seg label="Tamaño de letra" value={s.largeText ? 'big' : 'normal'} options={[['normal', 'Letra normal'], ['big', 'Letra grande']]} onChange={(v) => updateSettings({ largeText: v === 'big' })} />
       </section>
-      <section class="card stack">
+      <section class="card stack" id="codigo">
         <h2>Código del viaje</h2>
         <p class="small muted">El mismo en los dos móviles. Sin él, todo funciona pero no se comparte.</p>
         {showCode
@@ -117,7 +119,7 @@ export function SettingsScreen() {
       <OfflineCard />
       <section class="card stack">
         <h2>Estado</h2>
-        <InstallCard />
+        <div id="instalar"><InstallCard /></div>
         <Status />
         <button type="button" class="btn" disabled={upd === 'checking'} onClick={lookForUpdate}>{upd === 'checking' ? 'Buscando…' : 'Buscar versión nueva'}</button>
         {upd && upd !== 'checking' && (

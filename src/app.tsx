@@ -6,6 +6,7 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import { LostButton } from '@/components/Lost';
 import { TicketViewer } from '@/components/TicketViewer';
 import { isSimulated, stopSimulation } from '@/lib/clock';
+import { usePresencePing } from '@/lib/presence';
 import { useSettings } from '@/lib/settings';
 import { useSyncStatus } from '@/lib/sync-status';
 import { requestSync } from '@/lib/sync';
@@ -57,6 +58,7 @@ function TabBar() {
 }
 
 function Shell({ needRefresh, updateServiceWorker }: { needRefresh: boolean; updateServiceWorker: (reload?: boolean) => Promise<void> }) {
+  usePresencePing();
   return (
     <div class="app">
       {isSimulated() && (
