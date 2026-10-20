@@ -17,6 +17,8 @@ export interface ReadyInput {
   swReady: boolean;
   persisted: boolean | null;
   missing: Stage[];
+  /** Archivos de este móvil que el servidor no ha aceptado (no llegan al otro móvil). */
+  unshared?: number;
 }
 
 const H = 3600_000;
@@ -61,6 +63,10 @@ export function readinessChecks(i: ReadyInput): Check[] {
   const offOk = i.missing.length === 0;
   out.push({ id: 'offline', critical: true, ok: offOk, title: 'Roma guardada sin conexión',
     detail: offOk ? 'Mapa, calles, sitios, metro, relieve y fotos están guardados.' : `Falta: ${i.missing.map((s) => STAGE_LABEL[s].toLowerCase()).join(', ')}.`, fix: offOk ? undefined : 'download' });
+
+  const un = i.unshared ?? 0;
+  out.push({ id: 'files', critical: true, ok: un === 0, title: 'Archivos compartidos',
+    detail: un === 0 ? 'Las entradas, fotos y notas de voz de este móvil llegan también al otro.' : `${un} ${un === 1 ? 'archivo no se ha podido' : 'archivos no se han podido'} compartir (demasiado grande o formato raro): mira las entradas en Reservas.` });
 
   out.push({ id: 'persist', critical: false, ok: i.persisted !== false, title: 'Almacenamiento protegido',
     detail: i.persisted === false ? 'El navegador podría borrar lo guardado si se queda sin espacio. Usa siempre la app instalada.' : 'El navegador no borrará lo guardado.' });

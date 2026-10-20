@@ -93,16 +93,23 @@ export function viewFor(e: ServerEntity, who: string | null, now: number, all: {
   return e;
 }
 
-export async function handlePush(store: Store, body: unknown, now: number): Promise<{ accepted: { id: string; serverAt: number; updatedAt: number }[]; rejected: string[] }> {
+/**
+ * Guarda los cambios. Cada uno se sella con la hora del servidor JUSTO antes de escribirlo (no al empezar
+ * el envío): así un móvil que pide novedades a la vez nunca se salta un cambio que se guardó durante su
+ * petición (la consulta usa además un margen de solape).
+ */
+export async function handlePush(store: Store, body: unknown, now: number | (() => number)): Promise<{ accepted: { id: string; serverAt: number; updatedAt: number }[]; rejected: string[] }> {
   const list = (body as { entities?: unknown[] } | null)?.entities;
   if (!Array.isArray(list) || list.length > 100) throw new Error('bad_request');
+  const clock = typeof now === 'function' ? now : (() => { let t = now; return () => t++; })();
   const accepted: { id: string; serverAt: number; updatedAt: number }[] = [];
   const rejected: string[] = [];
-  let serverAt = now;
+  let last = 0;
   for (const raw of list) {
     const e = validate(raw);
     if (!e) { rejected.push(String((raw as { id?: unknown })?.id ?? '?')); continue; }
-    const stored = { ...e, serverAt: serverAt++ };
+    last = Math.max(clock(), last + 1);
+    const stored = { ...e, serverAt: last };
     if (await store.putIfNewer(stored)) accepted.push({ id: e.id, serverAt: stored.serverAt, updatedAt: e.updatedAt });
     else rejected.push(e.id);
   }
@@ -110,7 +117,7 @@ export async function handlePush(store: Store, body: unknown, now: number): Prom
 }
 
 /** Margen de solape para no perder cambios escritos en el mismo instante que un pull. */
-export const PULL_OVERLAP_MS = 5000;
+export const PULL_OVERLAP_MS = 10_000;
 
 export async function handlePull(store: Store, opts: { since?: number; ids?: string[]; who: string | null }, now: number): Promise<{ entities: ServerEntity[]; serverTime: number }> {
   const raw = opts.ids?.length ? await store.getMany(opts.ids.slice(0, 200)) : await store.changedSince(Math.max(0, (opts.since ?? 0) - PULL_OVERLAP_MS));

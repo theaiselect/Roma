@@ -26,7 +26,7 @@ export async function POST(req: Request): Promise<Response> {
   let body: unknown;
   try { body = await req.json(); } catch { return json(400, { error: 'bad_json' }); }
   try {
-    return json(200, await handlePush(store, body, Date.now()));
+    return json(200, await handlePush(store, body, () => Date.now()));
   } catch {
     return json(400, { error: 'bad_request' });
   }

@@ -3,7 +3,7 @@ import type { Map as MlMap, GeoJSONSource, LngLatBoundsLike } from 'maplibre-gl'
 import type { LatLng } from '@/lib/geo';
 import type { MetroData } from '@/lib/metro-map';
 import { ROME_CENTER, STYLE_URL, type Route } from '@/lib/osm';
-import { darkenBasemap } from '@/lib/map-theme';
+import { darkenBasemap, localizeLabels } from '@/lib/map-theme';
 
 export type PinKind = 'stop' | 'dot' | 'heart' | 'poi' | 'hotel' | 'found' | 'saved';
 export type PinStatus = 'todo' | 'done' | 'now' | 'next';
@@ -157,14 +157,20 @@ export function RomaMap({ pins, me, route, alts, onPickAlt, dark, threeD, metro,
       map.current = m;
       if (import.meta.env.DEV || location.search.includes('e2e')) (window as unknown as { __romaMap?: MlMap }).__romaMap = m; // para las pruebas e2e
       m.addControl(new lib.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right');
-      timer = window.setTimeout(() => { if (!ready.current) onFail(); }, 15_000);
-      m.on('error', (e) => {
-        // Sin red y sin mapa descargado: el estilo no llega y volvemos al esquema.
-        if (!ready.current && /style|fetch|Failed|network/i.test(String((e as unknown as { error?: { message?: string } }).error?.message ?? ''))) onFail();
-      });
+      // Solo se cambia al esquema si no llega el ESTILO del mapa. Una tesela, un icono o una letra que fallen
+      // (sin conexión, cobertura) no tumban el mapa: se pinta con lo que haya.
+      let styleOk = false;
       const dk = latest.current.dark;
-      if (dk) m.on('style.load', () => darkenBasemap(m as unknown as Parameters<typeof darkenBasemap>[0]));
-      m.on('load', () => {
+      m.on('style.load', () => {
+        styleOk = true;
+        localizeLabels(m as unknown as Parameters<typeof localizeLabels>[0]);
+        if (dk) darkenBasemap(m as unknown as Parameters<typeof darkenBasemap>[0]);
+      });
+      m.on('error', (e) => {
+        if (!ready.current && !styleOk && /style|fetch|Failed|network/i.test(String((e as unknown as { error?: { message?: string } }).error?.message ?? ''))) onFail();
+      });
+      const init = () => {
+        if (ready.current || dead) return;
         ready.current = true;
         window.clearTimeout(timer);
         m.addImage('heart', dk ? heartImage('#E8B4B0', '#17110F') : heartImage('#C0583A'), { pixelRatio: 2 });
@@ -238,7 +244,10 @@ export function RomaMap({ pins, me, route, alts, onPickAlt, dark, threeD, metro,
         paint();
         if (latest.current.threeD) m.setPitch(58);
         fit(m);
-      });
+      };
+      m.on('load', init);
+      // Si el estilo está pero alguna tesela no llega, «load» puede tardar: a los 15 s se arranca igual.
+      timer = window.setTimeout(() => { if (ready.current) return; if (styleOk) init(); else onFail(); }, 15_000);
     })().catch(() => { if (!dead) onFail(); });
     return () => {
       dead = true;

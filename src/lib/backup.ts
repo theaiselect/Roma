@@ -2,6 +2,7 @@ import { appNow } from '@/lib/clock';
 import { db, DB_EVENT, type Entity } from '@/lib/db';
 import { readLocal, writeLocal } from '@/lib/local';
 import { wins } from '@/lib/merge';
+import { liveBlobIds } from '@/lib/blob-refs';
 
 // Copia de seguridad (F36): todo a un JSON (datos vivos + archivos) y restaurar en cualquier navegador.
 export interface Backup {
@@ -10,7 +11,12 @@ export interface Backup {
   exportedAt: number;
   entities: Entity[];
   blobs: { id: string; mime: string; data: string }[];
+  /** Lo que solo vive en este móvil (Mi ficha de emergencia, frases favoritas). */
+  local?: Record<string, string>;
 }
+
+/** Datos solo locales que también van en la copia. */
+const LOCAL_KEYS = ['roma-my-card', 'roma-fav-phrases'];
 
 async function toBase64(b: Blob): Promise<string> {
   const buf = new Uint8Array(await b.arrayBuffer());
@@ -29,31 +35,26 @@ function fromBase64(data: string, mime: string): Blob {
 export async function makeBackup(): Promise<Backup> {
   const d = await db();
   const entities = await d.getAll('entities');
-  const blobs = await Promise.all((await d.getAll('blobs')).map(async (b) => ({ id: b.id, mime: b.mime, data: await toBase64(b.blob) })));
-  return { app: 'roma', version: 1, exportedAt: Date.now(), entities, blobs };
+  // Solo los archivos que cita algún dato vivo: lo borrado no viaja en la copia.
+  const live = liveBlobIds(entities);
+  const blobs = await Promise.all((await d.getAll('blobs')).filter((b) => live.has(b.id)).map(async (b) => ({ id: b.id, mime: b.mime, data: await toBase64(b.blob) })));
+  const local: Record<string, string> = {};
+  for (const k of LOCAL_KEYS) { try { const v = localStorage.getItem(k); if (v !== null) local[k] = v; } catch { /* sin almacenamiento */ } }
+  return { app: 'roma', version: 1, exportedAt: Date.now(), entities, blobs, local };
 }
 
 const LAST_KEY = 'roma-last-backup';
 export const lastBackupAt = (): number | null => readLocal<number | null>(LAST_KEY, null);
 
-export async function downloadBackup(): Promise<void> {
+/** Prepara el archivo de la copia (puede tardar con muchas fotos). */
+export async function prepareBackup(): Promise<File> {
   const b = await makeBackup();
-  const blob = new Blob([JSON.stringify(b)], { type: 'application/json' });
   const date = new Date().toISOString().slice(0, 10);
-  const file = new File([blob], `roma-copia-${date}.json`, { type: 'application/json' });
-  if (navigator.canShare?.({ files: [file] })) {
-    let shared = true;
-    await navigator.share({ files: [file], title: 'Copia de seguridad de Roma' }).catch(() => { shared = false; });
-    if (shared) writeLocal(LAST_KEY, appNow());
-    return;
-  }
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = file.name;
-  a.click();
-  window.setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-  writeLocal(LAST_KEY, appNow());
+  return new File([JSON.stringify(b)], `roma-copia-${date}.json`, { type: 'application/json' });
 }
+
+/** Ya hay copia guardada (se llama al compartirla o descargarla). */
+export const markBackupDone = (): void => writeLocal(LAST_KEY, appNow());
 
 /** Restaura una copia: cada dato se fusiona con la regla de último cambio; los archivos se añaden. */
 export async function restoreBackup(text: string): Promise<{ entities: number; blobs: number }> {
@@ -77,6 +78,8 @@ export async function restoreBackup(text: string): Promise<{ entities: number; b
     m++;
   }
   await tx.done;
+  // Mi ficha y las favoritas: solo si este móvil no tiene las suyas.
+  for (const [k, v] of Object.entries(b.local ?? {})) { try { if (LOCAL_KEYS.includes(k) && localStorage.getItem(k) === null) localStorage.setItem(k, v); } catch { /* ignore */ } }
   window.dispatchEvent(new CustomEvent(DB_EVENT));
   return { entities: n, blobs: m };
 }

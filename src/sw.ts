@@ -17,13 +17,24 @@ registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { deny
 registerRoute(({ url }) => url.pathname.startsWith('/api/'), new NetworkOnly(), 'GET');
 registerRoute(({ url }) => url.pathname.startsWith('/api/'), new NetworkOnly(), 'POST');
 
-// Mapa (OpenFreeMap): teselas, iconos y letras en la caché «mapa» (la rellena el botón «Descargar Roma»
-// y, además, todo lo que se vea con conexión). Sin red, el mapa sale de ahí.
+// Mapa (OpenFreeMap). El estilo y el TileJSON se FIJAN: se sirve siempre la versión guardada, porque
+// OpenFreeMap publica teselas nuevas cada semana con otra dirección y, si el TileJSON se actualizara solo,
+// el mapa pediría teselas que no están descargadas. Solo la descarga de Roma los cambia (pide con `reload`).
+const pinned = ({ url }: { url: URL }) => url.hostname === 'tiles.openfreemap.org' && (/^\/styles\//.test(url.pathname) || /^\/planet(\/latest)?\/?$/.test(url.pathname));
+registerRoute(pinned, async ({ request }) => {
+  const cache = await caches.open('mapa');
+  if (request.cache === 'reload') return fetch(request);
+  const hit = await cache.match(request.url);
+  if (hit) return hit;
+  const res = await fetch(request);
+  if (res.ok) await cache.put(request.url, res.clone());
+  return res;
+});
+// Teselas, iconos y letras: una vez guardados no cambian (cada versión tiene su dirección).
 registerRoute(
   ({ url }) => url.hostname === 'tiles.openfreemap.org' && /^\/(planet\/|fonts\/|sprites\/)/.test(url.pathname),
   new CacheFirst({ cacheName: 'mapa' }),
 );
-// Estilo y TileJSON cambian de vez en cuando: se sirve lo guardado y se refresca detrás.
 registerRoute(
   ({ url }) => url.hostname === 'tiles.openfreemap.org',
   new StaleWhileRevalidate({ cacheName: 'mapa' }),

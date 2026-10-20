@@ -212,3 +212,29 @@ export async function geocodeCached(key: string, query: string): Promise<LatLng 
   await setMeta(k, pos);
   return pos;
 }
+
+/**
+ * Sitios del plan sin coordenadas en los datos (no se ha podido comprobar una fuente): se buscan con Photon
+ * durante la descarga sin conexión y se guardan, así el hotel y el Pincio salen en el mapa aunque no haya red.
+ */
+export const EXTRA_GEO: Record<string, string[]> = {
+  'hotel-soha': ['Via Zucchelli 32, Roma', 'Via Zucchelli, Roma'],
+  pincio: ['Terrazza del Pincio, Roma', 'Pincio, Roma'],
+};
+
+export async function resolveExtraGeo(): Promise<{ have: number; total: number }> {
+  let have = 0;
+  for (const [id, queries] of Object.entries(EXTRA_GEO)) {
+    let pos = await getMeta<LatLng>(`geo:${id}`);
+    for (const q of queries) { if (pos) break; pos = (await geocodeCached(id, q).catch(() => null)) ?? undefined; }
+    if (pos) have++;
+  }
+  return { have, total: Object.keys(EXTRA_GEO).length };
+}
+
+/** Coordenadas guardadas de esos sitios (sin red). */
+export async function extraGeo(): Promise<Record<string, LatLng>> {
+  const out: Record<string, LatLng> = {};
+  for (const id of Object.keys(EXTRA_GEO)) { const p = await getMeta<LatLng>(`geo:${id}`); if (p) out[id] = p; }
+  return out;
+}

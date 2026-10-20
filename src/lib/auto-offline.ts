@@ -13,9 +13,9 @@ export const PHOTOS_MAX_AGE = 45 * DAY;
 /** Qué etapas faltan o están viejas. El tiempo se refresca por su cuenta. */
 export function stagesNeeded(s: OfflineStatus, now: number): Stage[] {
   const out: Stage[] = [];
-  if (!s.map || now - s.map.at > MAP_MAX_AGE) out.push('map');
+  if (!s.map || now - s.map.at > MAP_MAX_AGE || !s.map.current || (s.map.total !== undefined && s.map.tiles < s.map.total * 0.98)) out.push('map');
   if (!s.graph || now - s.graph.at > DATA_MAX_AGE) out.push('graph');
-  if (!s.places || now - s.places.at > DATA_MAX_AGE) out.push('places');
+  if (!s.places || now - s.places.at > DATA_MAX_AGE || (s.geo !== undefined && s.geo.have < s.geo.total)) out.push('places');
   if (!s.pois || now - s.pois.at > DATA_MAX_AGE) out.push('pois');
   if (!s.metro || now - s.metro.at > METRO_MAX_AGE) out.push('metro');
   if (!s.relief || now - s.relief.at > RELIEF_MAX_AGE) out.push('relief');

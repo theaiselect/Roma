@@ -45,15 +45,33 @@ const LAND_HI: RGB = [44, 33, 28];
 const WATER: RGB = [16, 27, 34];
 const GREEN: RGB = [27, 27, 19];
 const BUILDING: RGB = [38, 29, 25];
-const ROAD: RGB = [78, 61, 52];
-const ROAD_CASING: RGB = [12, 9, 8];
+const ROAD_MAJOR: RGB = [96, 76, 64];
+const ROAD: RGB = [74, 58, 50];
+const ROAD_SUBTLE: RGB = [52, 40, 35];
+const PATH: RGB = [62, 49, 42];
+const CASING: RGB = [12, 9, 8];
+const RAIL: RGB = [66, 52, 45];
 const LINE_HI: RGB = [90, 67, 56];
 const TEXT_LO: RGB = [143, 127, 115];
 const TEXT_HI: RGB = [232, 220, 205];
 
 const isWater = (id: string) => /water|sea|ocean|river|lake/.test(id);
 const isGreen = (id: string) => /park|wood|grass|forest|green|garden|pitch|landcover|meadow|scrub|cemetery/.test(id);
-const isRoad = (id: string) => /road|street|bridge|tunnel|motorway|trunk|primary|secondary|tertiary|minor|service|path|pedestrian|highway|link/.test(id);
+const isRoad = (id: string) => /road|street|bridge|tunnel|motorway|trunk|primary|secondary|tertiary|minor|service|path|pedestrian|highway|link|aeroway|pier/.test(id);
+
+/**
+ * Color nocturno de una línea de calle. Se decide por el TIPO de capa (su nombre), no por lo clara que sea
+ * en el mapa de día: en positron las calles pequeñas son gris claro, no blancas, y por color se confundían
+ * con los bordes. Bordes oscuros; calzadas más claras que el fondo; las grandes, más todavía.
+ */
+function roadColor(id: string): RGB {
+  if (/casing/.test(id)) return CASING;
+  if (/rail/.test(id)) return /dash/.test(id) ? ROAD_SUBTLE : RAIL;
+  if (/subtle/.test(id)) return ROAD_SUBTLE;
+  if (/path|pedestrian|pier|track/.test(id)) return PATH;
+  if (/major|motorway|trunk|primary|secondary|runway/.test(id)) return ROAD_MAJOR;
+  return ROAD;
+}
 
 /** Color de la capa `id`, propiedad `prop`, en su versión nocturna. */
 export function darkColor(id: string, prop: string, input: string): string {
@@ -67,17 +85,25 @@ export function darkColor(id: string, prop: string, input: string): string {
       if (isWater(id)) return out(WATER, a);
       if (isGreen(id)) return out(GREEN, a);
       if (/building/.test(id)) return out(BUILDING, a);
+      if (/aeroway|road_area|pier/.test(id)) return out(ROAD_SUBTLE, a);
       return out(mix(BG, LAND_HI, clamp((1 - L) * 4)), a);
     case 'fill-outline-color': return out(mix(BG, LINE_HI, 0.5), a);
     case 'fill-extrusion-color': return out(BUILDING, a);
     case 'line-color':
-      if (isWater(id)) return out(mix(WATER, [40, 66, 80], 0.6), a);
-      if (isRoad(id)) return out(L >= 0.9 ? ROAD : ROAD_CASING, a);
+      if (/waterway|river|canal/.test(id)) return out(mix(WATER, [40, 66, 80], 0.6), a);
+      if (/boundary/.test(id)) return out(mix(BG, LINE_HI, 0.6), a);
+      if (/rail/.test(id) || isRoad(id)) return out(roadColor(id), a);
       return out(mix(BG, LINE_HI, clamp((1 - L) * 1.3)), a);
     case 'text-color': case 'icon-color': return out(mix(TEXT_LO, TEXT_HI, clamp((1 - L) * 1.4)), a);
     case 'text-halo-color': case 'icon-halo-color': return out(BG, Math.max(a, 0.85));
     default: return input;
   }
+}
+
+/** Luminosidad relativa (0–1) de un color: para las pruebas. */
+export function luminance(input: string): number {
+  const c = parseColor(input);
+  return c ? lum(c) : NaN;
 }
 
 const COLOR_PROPS: Record<string, string[]> = {
@@ -113,6 +139,36 @@ export function darkenBasemap(map: MapLike): void {
       const v = l.paint?.[prop];
       if (v === undefined) continue;
       try { map.setPaintProperty(l.id, prop, mapColors(v, (c) => darkColor(l.id, prop, c))); } catch { /* capa rara: se queda como está */ }
+    }
+  }
+}
+
+interface LabelLayer { id: string; type: string; layout?: Record<string, unknown> }
+interface LabelMap { getStyle(): { layers?: LabelLayer[] } | undefined; setLayoutProperty(layer: string, prop: string, value: unknown): void }
+
+/** Cambia el nombre en inglés por el español (o el local) en una expresión de rótulo. */
+export function localizeField(v: unknown, street: boolean): unknown {
+  if (Array.isArray(v)) {
+    if (v.length === 2 && v[0] === 'get' && v[1] === 'name_en') return street ? ['get', 'name'] : ['coalesce', ['get', 'name:es'], ['get', 'name']];
+    return v.map((x) => localizeField(x, street));
+  }
+  if (typeof v === 'string' && v.includes('{name_en}')) return v.replace(/\{name_en\}/g, street ? '{name}' : '{name:es}');
+  return v;
+}
+
+/**
+ * Rótulos: el estilo de OpenFreeMap pone el nombre en inglés si existe («Rome», «Colosseum»). Las calles van
+ * con su nombre local (el de las placas: «Via del Corso») y los sitios en español si lo hay («Coliseo»).
+ */
+export function localizeLabels(map: LabelMap): void {
+  for (const l of map.getStyle()?.layers ?? []) {
+    if (l.type !== 'symbol') continue;
+    const f = l.layout?.['text-field'];
+    if (f === undefined) continue;
+    const street = /highway|road|street/.test(l.id);
+    const next = localizeField(f, street);
+    if (JSON.stringify(next) !== JSON.stringify(f)) {
+      try { map.setLayoutProperty(l.id, 'text-field', next); } catch { /* rótulo raro: se queda como está */ }
     }
   }
 }

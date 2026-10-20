@@ -23,9 +23,12 @@ export interface Entity {
 interface RomaDB extends DBSchema {
   entities: { key: string; value: Entity; indexes: { kind: EntityKind } };
   outbox: { key: string; value: { entityId: string; kind: EntityKind; queuedAt: number } };
-  blobs: { key: string; value: { id: string; blob: Blob; mime: string; uploaded: boolean; createdAt: number } };
+  blobs: { key: string; value: BlobRow };
   meta: { key: string; value: { key: string; value: unknown } };
 }
+
+/** Archivo guardado en el móvil. `uploadError`: el servidor no lo acepta (demasiado grande o formato raro). */
+export interface BlobRow { id: string; blob: Blob; mime: string; uploaded: boolean; createdAt: number; uploadError?: 'too_large' | 'bad_type' }
 
 const EVENT = 'roma-db-change';
 let dbp: Promise<IDBPDatabase<RomaDB>> | null = null;
@@ -121,6 +124,30 @@ export async function setMeta(key: string, value: unknown): Promise<void> {
 export async function putBlob(blob: Blob, id = uuid()): Promise<string> {
   await (await db()).put('blobs', { id, blob, mime: blob.type, uploaded: false, createdAt: Date.now() });
   return id;
+}
+
+/** Quita un archivo de este móvil (ya no lo cita ningún dato). */
+export async function deleteBlobLocal(id: string): Promise<void> {
+  await (await db()).delete('blobs', id);
+}
+
+/** Archivos de este móvil que el servidor no ha aceptado, con el motivo. Se actualiza al cambiar datos. */
+export function useBlobErrors(ids: readonly string[]): Map<string, NonNullable<BlobRow['uploadError']>> {
+  const [m, setM] = useState(new Map<string, NonNullable<BlobRow['uploadError']>>());
+  const key = ids.join(',');
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const d = await db();
+      const out = new Map<string, NonNullable<BlobRow['uploadError']>>();
+      for (const id of ids) { const r = await d.get('blobs', id); if (r?.uploadError) out.set(id, r.uploadError); }
+      if (alive) setM(out);
+    };
+    void load();
+    window.addEventListener(EVENT, load);
+    return () => { alive = false; window.removeEventListener(EVENT, load); };
+  }, [key]);
+  return m;
 }
 
 export async function getBlob(id: string): Promise<Blob | undefined> {

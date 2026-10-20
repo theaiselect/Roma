@@ -7,6 +7,7 @@ export interface TicketRef {
   blobId: string;
   mime: string;
   name: string;
+  pageBlobIds?: string[];
 }
 
 export interface TicketRequest { items: TicketRef[]; index: number }

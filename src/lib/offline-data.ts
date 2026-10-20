@@ -1,10 +1,11 @@
 // Todo lo que hace falta para usar Roma sin conexión: calles (rutas), sitios (buscador), mapa, tiempo y archivos.
 import { db, getMeta, setMeta } from '@/lib/db';
+import { liveBlobIds } from '@/lib/blob-refs';
 import { distanceM, type LatLng } from '@/lib/geo';
 import { buildGraph, fromStored, routeLeg, snap, toStored, type Graph, type OfflineLeg, type RawWay } from '@/lib/graph';
-import { downloadRoma, mapDownloadInfo, type MapDownload } from '@/lib/offline-map';
+import { downloadRoma, mapDownloadInfo, mapIsCurrent, type MapDownload } from '@/lib/offline-map';
 import { downloadMetro, cachedMetro } from '@/lib/metro-map';
-import { refreshPois, ROME_BBOX, ROME_CENTER, type Found } from '@/lib/osm';
+import { extraGeo, EXTRA_GEO, refreshPois, resolveExtraGeo, ROME_BBOX, ROME_CENTER, type Found } from '@/lib/osm';
 import { downloadRelief, reliefInfo } from '@/lib/relief';
 import { ensureBlob } from '@/lib/sync';
 import { forecastCached, refreshForecast } from '@/lib/weather';
@@ -243,26 +244,12 @@ export async function reverseOffline(p: LatLng): Promise<Found | null> {
 }
 
 // ── Archivos (entradas, fotos, tiques, audios) ──────────────────
-const BLOB_FIELDS = ['blobId', 'photoBlobId', 'voiceBlobId'];
-const BLOB_LIST_FIELDS = ['voiceBlobIds', 'photoBlobIds'];
+export { blobIdsOf } from '@/lib/blob-refs';
 
-/** Ids de archivos que cita un dato (campos sueltos y listas, p. ej. varias notas de voz en un día del diario). */
-export function blobIdsOf(e: object): string[] {
-  const r = e as Record<string, unknown>;
-  const out: string[] = [];
-  for (const f of BLOB_FIELDS) { const v = r[f]; if (typeof v === 'string') out.push(v); }
-  for (const f of BLOB_LIST_FIELDS) { const v = r[f]; if (Array.isArray(v)) for (const x of v) if (typeof x === 'string') out.push(x); }
-  return out;
-}
-
-/** Ids de archivos que cita algún dato del viaje, y cuántos faltan en este móvil. */
+/** Archivos imprescindibles que cita algún dato del viaje, y cuántos faltan en este móvil. */
 export async function blobStatus(): Promise<{ total: number; missing: string[] }> {
   const d = await db();
-  const ids = new Set<string>();
-  for (const e of await d.getAll('entities')) {
-    if (e.deleted) continue;
-    for (const id of blobIdsOf(e)) ids.add(id);
-  }
+  const ids = liveBlobIds(await d.getAll('entities'), true);
   const missing: string[] = [];
   for (const id of ids) if (!(await d.get('blobs', id))) missing.push(id);
   return { total: ids.size, missing };
@@ -281,7 +268,7 @@ export async function downloadBlobs(onProgress: (done: number, total: number) =>
 
 // ── Estado y orquestación ───────────────────────────────────────
 export interface OfflineStatus {
-  map: MapDownload | undefined;
+  map: (MapDownload & { current: boolean }) | undefined;
   graph: GraphInfo | undefined;
   places: { at: number; count: number } | undefined;
   pois: { at: number; count: number } | undefined;
@@ -290,6 +277,8 @@ export interface OfflineStatus {
   photos: { at: number | undefined; have: number; total: number };
   weather: number | null;
   blobs: { total: number; missing: number };
+  /** Sitios sin coordenadas en los datos (hotel, Pincio) ya localizados. */
+  geo?: { have: number; total: number };
 }
 
 export async function offlineStatus(): Promise<OfflineStatus> {
@@ -297,7 +286,7 @@ export async function offlineStatus(): Promise<OfflineStatus> {
     mapDownloadInfo(), getMeta<GraphInfo>(GRAPH_INFO), getMeta<PlaceIdx>(PLACES_KEY), getMeta<{ at: number; pois: unknown[] }>('osm-pois'), blobStatus(), cachedMetro(), reliefInfo(), wikiStatus(),
   ]);
   return {
-    map, graph,
+    map: map ? { ...map, current: await mapIsCurrent(map) } : undefined, graph,
     places: pl ? { at: pl.at, count: pl.items.length } : undefined,
     pois: pois ? { at: pois.at, count: pois.pois.length } : undefined,
     metro: metro ? { at: metro.at, stations: metro.stations.length } : undefined,
@@ -305,6 +294,7 @@ export async function offlineStatus(): Promise<OfflineStatus> {
     photos,
     weather: forecastCached()?.fetchedAt ?? null,
     blobs: { total: b.total, missing: b.missing.length },
+    geo: { have: Object.keys(await extraGeo()).length, total: Object.keys(EXTRA_GEO).length },
   };
 }
 
@@ -324,7 +314,12 @@ export async function prepareOffline(onStage: (s: Stage, done: number, total: nu
   };
   await run('map', () => downloadRoma((d, t) => onStage('map', d, t), signal));
   await run('graph', () => downloadGraph((d, t) => onStage('graph', d, t)));
-  await run('places', () => downloadPlaces((d, t) => onStage('places', d, t)));
+  await run('places', async () => {
+    await downloadPlaces((d, t) => onStage('places', d, t));
+    // El hotel y el Pincio no traen coordenadas en los datos: se buscan ahora y se guardan.
+    const g = await resolveExtraGeo();
+    if (g.have < g.total) throw new Error('Sin coordenadas del hotel');
+  });
   await run('pois', async () => { if (!(await refreshPois(true))) throw new Error('pois'); });
   await run('metro', () => downloadMetro((q) => overpass(q, 60_000)));
   await run('relief', () => downloadRelief((d, t) => onStage('relief', d, t)));

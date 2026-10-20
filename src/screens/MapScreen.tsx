@@ -22,7 +22,7 @@ import { useTimeline } from '@/lib/plan-state';
 import { useDark, useSettings } from '@/lib/settings';
 import { romeParts } from '@/lib/time';
 import { OfflineCard } from '@/components/OfflineCard';
-import { cachedPois, footRoute, footRouteVia, footRoutes, formatDuration, geocodeCached, nearest, refreshPois, reverseGeocode, searchPlaces, type Found, type Poi, type PoiKind, type Route } from '@/lib/osm';
+import { cachedPois, EXTRA_GEO, extraGeo, footRoute, footRouteVia, footRoutes, formatDuration, nearest, resolveExtraGeo, refreshPois, reverseGeocode, searchPlaces, type Found, type Poi, type PoiKind, type Route } from '@/lib/osm';
 import { useLocal } from '@/lib/local';
 import { downloadMetro, useMetro } from '@/lib/metro-map';
 import { overpass } from '@/lib/offline-data';
@@ -185,6 +185,7 @@ export function MapScreen() {
   const [pois, setPois] = useState<Poi[]>([]);
   const [poiAge, setPoiAge] = useState<number | null>(null);
   const [hotel, setHotel] = useState<LatLng | null>(null);
+  const [extra, setExtra] = useState<Record<string, LatLng>>({});
   const [heading, setHeading] = useState<number | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [follow, setFollow] = useState(false);
@@ -211,7 +212,17 @@ export function MapScreen() {
   useEffect(() => {
     void cachedPois().then((c) => { if (c) { setPois(c.pois); setPoiAge(c.at); } });
     void refreshPois().then((c) => { if (c) { setPois(c.pois); setPoiAge(c.at); } });
-    void geocodeCached('hotel-soha', 'Via Zucchelli 32, Roma').then(setHotel);
+    // Hotel y Pincio: sin coordenadas en los datos; se localizan (y guardan) con conexión y luego salen sin ella.
+    void extraGeo().then(async (g) => {
+      setExtra(g);
+      if (g['hotel-soha']) setHotel(g['hotel-soha']);
+      if (navigator.onLine && Object.keys(g).length < Object.keys(EXTRA_GEO).length) {
+        await resolveExtraGeo().catch(() => undefined);
+        const g2 = await extraGeo();
+        setExtra(g2);
+        if (g2['hotel-soha']) setHotel(g2['hotel-soha']);
+      }
+    });
     void getMeta<Found[]>('map-recent').then((r) => { if (r) setRecent(r); });
     // Si ya diste permiso de ubicación, el punto azul aparece solo: no hay que pulsar nada.
     void navigator.permissions?.query({ name: 'geolocation' as PermissionName }).then((s) => { if (s.state === 'granted') void doLocate(); }).catch(() => undefined);
@@ -254,13 +265,13 @@ export function MapScreen() {
   const resolve = (placeId: string): LatLng | undefined => {
     const p = placeById.get(placeId);
     if (p?.lat !== undefined && p.lng !== undefined) return { lat: p.lat, lng: p.lng };
-    return placeId === 'hotel-soha' ? hotel ?? undefined : undefined;
+    return placeId === 'hotel-soha' ? hotel ?? undefined : extra[placeId];
   };
   const doneIds = new Set([...doneChecks.values()].filter((c) => c.done).map((c) => c.itemId));
   // Un día elegido: paradas numeradas 1, 2, 3… en orden. «Todos»: solo puntos de color, sin números.
   const dayStops = useMemo(
     () => (day ? buildDayStops(tl, day, { now, done: doneIds, resolve, currentId: state.current?.id, nextId: state.next?.id }) : { stops: [], path: [] }),
-    [tl, day, now, hotel, doneChecks, state.current?.id, state.next?.id],
+    [tl, day, now, hotel, extra, doneChecks, state.current?.id, state.next?.id],
   );
   // Si estás en una parada de hoy, sale solo el momento «habéis llegado» (una vez por parada).
   useEffect(() => {
@@ -271,7 +282,7 @@ export function MapScreen() {
   const allDots = useMemo(() => {
     if (day) return [] as { stop: MapStop; day: DayNum }[];
     return days.flatMap((d) => buildDayStops(tl, d.day, { now, done: new Set(), resolve }).stops.map((stop) => ({ stop, day: d.day })));
-  }, [tl, day, hotel]);
+  }, [tl, day, hotel, extra]);
   const stopPins: Pin[] = useMemo(() => dayStops.stops.map((s) => ({ id: s.placeId, lat: s.lat, lng: s.lng, day: day as DayNum, label: `${s.n}. ${s.title}`, short: String(s.n), place: placeById.get(s.placeId) })), [dayStops, day]);
   const heartPins: Pin[] = useMemo(() => memories.map((m) => ({ id: m.id, lat: m.lat as number, lng: m.lng as number, day: 0 as const, label: String(m.caption ?? m.text ?? 'Recuerdo'), heart: true })), [memories.length]);
   const pins = useMemo(() => [...stopPins, ...heartPins], [stopPins, heartPins]);

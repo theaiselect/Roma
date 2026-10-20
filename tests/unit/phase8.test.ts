@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { darkColor, darkenBasemap, mapColors, parseColor } from '../../src/lib/map-theme';
+import { createRequire } from 'node:module';
+import { darkColor, darkenBasemap, localizeLabels, luminance, mapColors, parseColor } from '../../src/lib/map-theme';
+const require = createRequire(import.meta.url);
 
 describe('mapa nocturno', () => {
   it('lee hex, rgb y hsl', () => {
@@ -46,5 +48,37 @@ describe('mapa nocturno', () => {
     });
     expect(calls.map((c) => c[0])).toEqual(['background', 'water']);
     expect(String(calls[1]![2])).toMatch(/^rgba\(/);
+  });
+});
+
+describe('mapa nocturno con el estilo real de OpenFreeMap (positron)', () => {
+  const style = JSON.parse(require('node:fs').readFileSync(new URL('../fixtures/ofm-positron-style.json', import.meta.url), 'utf8')) as { layers: { id: string; type: string; paint?: Record<string, unknown>; layout?: Record<string, unknown> }[] };
+  const painted = new Map<string, unknown>();
+  darkenBasemap({ getStyle: () => style, setPaintProperty: (l, p, v) => { painted.set(`${l}|${p}`, v); } });
+  const first = (v: unknown): string => (typeof v === 'string' ? v : Array.isArray(v) ? first(v.find((x) => typeof x === 'string' && parseColor(x)) ?? v.find(Array.isArray)) : '');
+  const bg = luminance(first(painted.get('background|background-color')));
+
+  it('todas las calzadas quedan más claras que el fondo (las pequeñas también)', () => {
+    const roads = style.layers.filter((l) => l.type === 'line' && /^(highway|tunnel|bridge|road)/.test(l.id) && !/casing|subtle/.test(l.id));
+    expect(roads.map((l) => l.id)).toContain('highway_minor');
+    for (const l of roads) {
+      const v = painted.get(`${l.id}|line-color`);
+      const vals = Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === 'string' && !!parseColor(x)) : [v as string];
+      const last = vals[vals.length - 1]!;
+      expect(luminance(last), l.id).toBeGreaterThan(bg + 0.05);
+    }
+  });
+
+  it('los bordes de las calles son más oscuros que la calzada', () => {
+    expect(luminance(first(painted.get('highway_major_casing|line-color')))).toBeLessThan(luminance(first(painted.get('highway_major_inner|line-color'))));
+  });
+
+  it('los rótulos dejan de salir en inglés: calles con su nombre local y sitios en español', () => {
+    const fields = new Map<string, unknown>();
+    localizeLabels({ getStyle: () => style, setLayoutProperty: (l, _p, v) => { fields.set(l, v); } });
+    const all = JSON.stringify([...fields.values()]);
+    expect(all).not.toContain('name_en');
+    expect(JSON.stringify(fields.get('highway-name-minor'))).toContain('"name"');
+    expect(JSON.stringify(fields.get('label_city'))).toContain('name:es');
   });
 });

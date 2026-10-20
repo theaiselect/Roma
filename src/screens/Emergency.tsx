@@ -5,16 +5,20 @@ import { consulateEmail, emergencyContacts, healthCard, lostDocumentSteps } from
 import { BackTitle } from '@/screens/More';
 import { HealthPlaces } from '@/screens/health';
 import { HotelCard, MyCardSection } from '@/screens/emergency-extras';
+import { travellers } from '@/data/trip';
+import { useSettings } from '@/lib/settings';
 
 /** Emergencias (F32): todo funciona sin conexión; los teléfonos son enlaces tel:. */
 export function Emergency() {
+  const me = useSettings().profile ?? 'jesus';
+  const other = travellers[me === 'jesus' ? 'lucia' : 'jesus'].name;
   return (
     <div class="stack-lg">
       <BackTitle title="Emergencias y salud" />
       <a class="btn danger block" href="tel:112" style={{ minHeight: '3.5rem', fontSize: '1.2rem' }}><Icon name="phone" /> Llamar al 112</a>
       <section class="card stack">
         <h2>Si necesitas que te encuentren</h2>
-        <p class="small">Manda a Lucía (o a quien quieras) un enlace con el punto exacto donde estás.</p>
+        <p class="small">Manda a {other} (o a quien quieras) un enlace con el punto exacto donde estás.</p>
         <ShareLocation />
         <a class="btn block" href="/mapa?f=pharmacy"><Icon name="map" /> Farmacias cerca de mí</a>
       </section>

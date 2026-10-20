@@ -29,8 +29,8 @@ export const hotel = {
   taxiText: 'Via Zucchelli 32, vicino alla metro Barberini',
   phone: '+39 351 247 3415' as string | undefined,
   email: undefined as string | undefined, // ⚠️ Pendiente: verificar en la reserva
-  bookingRef: '5044007987' as string | undefined, // Booking.com
-  pin: '5702' as string | undefined, // PIN de la reserva en Booking.com
+  // Reserva y PIN de Booking: NO van aquí (la app es pública para quien tenga el enlace). Están en el
+  // servidor (api/_private.ts) y llegan con el código del viaje: ver lib/private.ts.
 };
 
 export const flights = {

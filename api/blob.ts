@@ -1,12 +1,10 @@
-import { get, put } from '@vercel/blob';
+import { del, get, put } from '@vercel/blob';
+import { BLOB_ID_RE as ID_RE, MAX_BLOB_BYTES as MAX_BYTES, blobTypeOk } from './_blobRules.js';
 import { checkTripCode, json } from './_auth.js';
 import { blobConfigured, blobToken } from './_blobToken.js';
 import { RedisStore } from './_redis.js';
 
 // Fotos, notas de voz y entradas: Blob privado, solo a través de esta ruta y con el código del viaje.
-const ID_RE = /^[0-9a-f-]{36}$/i;
-const MAX_BYTES = 4 * 1024 * 1024; // límite de cuerpo de las funciones de Vercel: 4,5 MB
-const TYPES = /^(image\/(jpeg|png|webp|heic|heif|gif)|application\/pdf|audio\/(webm|mp4|mpeg|ogg|aac|x-m4a))(;.*)?$/i;
 
 function configured(): boolean {
   return blobConfigured();
@@ -19,7 +17,7 @@ export async function POST(req: Request): Promise<Response> {
   const id = new URL(req.url).searchParams.get('id') ?? '';
   const type = req.headers.get('content-type') ?? '';
   if (!ID_RE.test(id)) return json(400, { error: 'bad_id' });
-  if (!TYPES.test(type)) return json(415, { error: 'bad_type' });
+  if (!blobTypeOk(type)) return json(415, { error: 'bad_type' });
   const len = Number(req.headers.get('content-length') ?? 0);
   if (len > MAX_BYTES) return json(413, { error: 'too_large' });
   const buf = await req.arrayBuffer();
@@ -40,4 +38,15 @@ export async function GET(req: Request): Promise<Response> {
     status: 200,
     headers: { 'content-type': res.blob.contentType, 'cache-control': 'private, no-store' },
   });
+}
+
+/** Borra un archivo cuyo dato ya se borró (foto, entrada, nota de voz). */
+export async function DELETE(req: Request): Promise<Response> {
+  const denied = await checkTripCode(req, RedisStore.fromEnv());
+  if (denied) return denied;
+  if (!configured()) return json(503, { error: 'not_configured' });
+  const id = new URL(req.url).searchParams.get('id') ?? '';
+  if (!ID_RE.test(id)) return json(400, { error: 'bad_id' });
+  try { await del(`f/${id}`, { token: blobToken() }); } catch { /* ya no estaba */ }
+  return json(200, { ok: true });
 }

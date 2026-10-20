@@ -4,7 +4,8 @@ import { travellers } from '@/data/trip';
 import { isStandalone, offlineReady } from '@/screens/Onboarding';
 import { runAuto, stagesNeeded, useAutoOffline } from '@/lib/auto-offline';
 import { checkConnection } from '@/lib/connection';
-import { DB_EVENT, getMeta, outboxSize } from '@/lib/db';
+import { db, DB_EVENT, getMeta, outboxSize } from '@/lib/db';
+import { liveBlobIds } from '@/lib/blob-refs';
 import { offlineStatus } from '@/lib/offline-data';
 import { usePartnerSeen } from '@/lib/presence';
 import { failing, readinessChecks, type Check, type ReadyInput } from '@/lib/readiness';
@@ -19,7 +20,7 @@ export function useReadiness(server: ReadyInput['server'] = null): Check[] {
   const auto = useAutoOffline();
   const partnerWho = s.profile === 'lucia' ? 'jesus' : 'lucia';
   const seenAt = usePartnerSeen(partnerWho);
-  const [local, setLocal] = useState<Pick<ReadyInput, 'pending' | 'lastSyncAt' | 'swReady' | 'persisted' | 'missing'> | null>(null);
+  const [local, setLocal] = useState<Pick<ReadyInput, 'pending' | 'lastSyncAt' | 'swReady' | 'persisted' | 'missing' | 'unshared'> | null>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -39,9 +40,12 @@ export function useReadiness(server: ReadyInput['server'] = null): Check[] {
         navigator.storage?.persisted?.().catch(() => null) ?? Promise.resolve(null),
         getMeta<number>('lastSyncAt').catch(() => undefined),
       ]);
+      const d = await db();
+      const need = liveBlobIds(await d.getAll('entities'), true);
+      const unshared = (await d.getAll('blobs')).filter((b) => b.uploadError && need.has(b.id)).length;
       if (!alive) return;
       setLocal({
-        pending, swReady: sw, persisted: persisted ?? null,
+        pending, swReady: sw, persisted: persisted ?? null, unshared,
         lastSyncAt: last ?? syncInfo().lastSyncAt,
         missing: st ? stagesNeeded(st, Date.now()) : [],
       });

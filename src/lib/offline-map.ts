@@ -54,7 +54,15 @@ export function extraUrls(style: StyleJson): string[] {
   return out;
 }
 
-export interface MapDownload { at: number; tiles: number; bytes: number }
+export interface MapDownload {
+  at: number; tiles: number; bytes: number;
+  /** Teselas que tocaba bajar (para saber si la descarga quedó completa). */
+  total?: number;
+  /** Plantilla de teselas de la versión descargada (OpenFreeMap cambia de versión cada semana). */
+  tpl?: string;
+  /** Dirección del TileJSON que se dejó fijado en la caché. */
+  tileJsonUrl?: string;
+}
 const KEY = 'map-download';
 export const mapDownloadInfo = () => getMeta<MapDownload>(KEY);
 
@@ -72,32 +80,67 @@ async function put(cache: Cache, url: string): Promise<number> {
   return size;
 }
 
-/** Descarga Roma entera para usarla sin conexión. Devuelve cuántas teselas quedaron guardadas. */
+const jsonResponse = (v: unknown) => new Response(JSON.stringify(v), { headers: { 'content-type': 'application/json' } });
+
+/**
+ * ¿Lo descargado sirve para el mapa que se va a pintar? El estilo y el TileJSON quedan fijados en la caché
+ * (el service worker no los cambia), así que basta con comprobar que el TileJSON guardado apunta a la misma
+ * versión de teselas que se descargó.
+ */
+export async function mapIsCurrent(info: MapDownload | undefined): Promise<boolean> {
+  if (!info?.tpl) return false; // descarga antigua, de antes de fijar la versión: se repite una vez
+  if (!info.tileJsonUrl) return true;
+  try {
+    const hit = await (await caches.open(MAP_CACHE)).match(info.tileJsonUrl);
+    if (!hit) return false;
+    const tj = (await hit.json()) as TileJson;
+    return tj.tiles?.[0] === info.tpl;
+  } catch { return false; }
+}
+
+/** Descarga Roma entera para usarla sin conexión. Si faltan teselas, falla (y se reintenta) en vez de darla por buena. */
 export async function downloadRoma(onProgress: (done: number, total: number) => void, signal?: AbortSignal): Promise<MapDownload> {
   const cache = await caches.open(MAP_CACHE);
-  const style = (await (await fetch(STYLE_URL)).json()) as StyleJson;
-  await cache.put(STYLE_URL, new Response(JSON.stringify(style), { headers: { 'content-type': 'application/json' } }));
+  // `cache: 'reload'`: el service worker deja pasar la petición a la red (normalmente sirve la versión fijada).
+  const style = (await (await fetch(STYLE_URL, { cache: 'reload' })).json()) as StyleJson;
   const src = Object.values(style.sources).find((s) => s.type === 'vector');
   if (!src) throw new Error('El estilo no tiene teselas vectoriales');
   let tpl = src.tiles?.[0];
+  let tj: TileJson | null = null;
   if (!tpl && src.url) {
-    const tj = (await (await fetch(src.url)).json()) as TileJson;
-    await cache.put(src.url, new Response(JSON.stringify(tj), { headers: { 'content-type': 'application/json' } }));
-    tpl = tj.tiles[0];
+    tj = (await (await fetch(src.url, { cache: 'reload' })).json()) as TileJson;
+    tpl = tj.tiles?.[0];
   }
   if (!tpl) throw new Error('Sin plantilla de teselas');
-  const urls = [...extraUrls(style), ...tilesForBbox(DOWNLOAD_BBOX, 0, MAX_TILE_ZOOM).map((t) => tileUrl(tpl, t))];
-  let done = 0, ok = 0, bytes = 0, i = 0;
-  const worker = async () => {
-    while (i < urls.length && !signal?.aborted) {
-      const url = urls[i++]!;
-      try { bytes += await put(cache, url); ok++; } catch { /* una tesela que falle no tumba la descarga */ }
-      onProgress(++done, urls.length);
-    }
+  const tileUrls = tilesForBbox(DOWNLOAD_BBOX, 0, MAX_TILE_ZOOM).map((t) => tileUrl(tpl, t));
+  const urls = [...extraUrls(style), ...tileUrls];
+  let done = 0, ok = 0, bytes = 0;
+  const failed: string[] = [];
+  const runAll = async (list: string[], progress: boolean) => {
+    let i = 0;
+    const worker = async () => {
+      while (i < list.length && !signal?.aborted) {
+        const url = list[i++]!;
+        try { bytes += await put(cache, url); ok++; } catch { failed.push(url); }
+        if (progress) onProgress(++done, urls.length);
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, worker));
   };
-  await Promise.all(Array.from({ length: 6 }, worker));
+  await runAll(urls, true);
   if (signal?.aborted) throw new DOMException('Cancelado', 'AbortError');
-  const info = { at: Date.now(), tiles: ok, bytes };
+  // Segunda oportunidad para lo que falló (cortes de cobertura).
+  if (failed.length) { const again = failed.splice(0); await runAll(again, false); }
+  const tileSet = new Set(tileUrls);
+  const missingTiles = failed.filter((u) => tileSet.has(u)).length;
+  if (missingTiles > tileUrls.length * 0.02) throw new Error(`Faltan ${missingTiles} teselas de ${tileUrls.length}`);
+  // Solo ahora se fija esta versión: el mapa pedirá justo las teselas que se acaban de guardar.
+  await cache.put(STYLE_URL, jsonResponse(style));
+  if (src.url && tj) await cache.put(src.url, jsonResponse(tj));
+  // Las teselas de versiones anteriores ya no se van a pedir: fuera, para no ocupar espacio.
+  const prefix = tpl.split('{z}')[0]!;
+  for (const req of await cache.keys()) if (/\/planet\/[^?]+\.pbf/.test(req.url) && !req.url.startsWith(prefix)) await cache.delete(req);
+  const info: MapDownload = { at: Date.now(), tiles: tileUrls.length - missingTiles, bytes, total: tileUrls.length, tpl, tileJsonUrl: src.url };
   await setMeta(KEY, info);
   void navigator.storage?.persist?.();
   return info;

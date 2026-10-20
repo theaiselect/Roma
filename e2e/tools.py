@@ -56,7 +56,7 @@ with sync_playwright() as p:
     check('Retos: el sorprendente se resalta', pg.locator('.reto.surprise').count()==1)
     # Emergencias / Transporte
     go('/mas/emergencias')
-    check('Emergencias: botón de enviar ubicación y farmacias', pg.get_by_role('button',name='Enviar mi ubicación').count()==1 and pg.get_by_role('link',name=re.compile('Farmacias cerca')).count()==1)
+    check('Emergencias: botón de enviar ubicación y farmacias', pg.get_by_role('button',name=re.compile('^Enviar mi ubicación a (Lucía|Jesús)$')).count()==1 and pg.get_by_role('link',name=re.compile('Farmacias cerca')).count()==1)
     go('/mas/transporte')
     check('Transporte: «Volver al hotel» con metro y a pie', pg.get_by_role('link',name=re.compile('En metro o bus')).count()==1)
     check('sin errores de página', not errs)

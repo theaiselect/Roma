@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { BlobImage } from '@/components/BlobImage';
 import { Icon } from '@/components/Icon';
+import { canShareFile, downloadFile, FileReady } from '@/components/FileShare';
 import { euros } from '@/components/StopCard';
 import { challenges } from '@/data/challenges';
 import { itinerary } from '@/data/itinerary';
@@ -95,6 +96,7 @@ export function Book() {
   const finished = appNow() >= romeToUtc(tripEnd, '00:00');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [bookFile, setBookFile] = useState<File | null>(null);
 
   const exportFile = async () => {
     setBusy(true);
@@ -126,14 +128,8 @@ export function Book() {
         ],
       });
       const file = new File([html], 'libro-roma.html', { type: 'text/html' });
-      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'Nuestro viaje a Roma' }).catch(() => undefined);
-      else {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(file);
-        a.download = file.name;
-        a.click();
-        window.setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-      }
+      // Compartir va en un segundo toque (el móvil no deja abrir el menú después de preparar el archivo).
+      if (canShareFile(file)) setBookFile(file); else downloadFile(file);
       setNote(missing ? `Hecho. ${missing} ${missing === 1 ? 'foto no estaba descargada' : 'fotos no estaban descargadas'} en este móvil y no se incluyeron (conéctate un momento y vuelve a probar).` : 'Hecho: el archivo se abre en cualquier móvil o PC, sin conexión.');
     } catch {
       setNote('No se ha podido crear el libro. Prueba otra vez; si falla, cierra y abre la app.');
@@ -149,6 +145,7 @@ export function Book() {
         <button type="button" class="btn primary" disabled={busy} onClick={() => void exportFile()}><Icon name="book" /> {busy ? 'Preparando el libro…' : 'Guardar el libro (archivo)'}</button>
         <button type="button" class="btn" onClick={() => window.print()}><Icon name="file" /> Imprimir o guardar como PDF</button>
         <p class="small muted">Si el botón de imprimir no hace nada (pasa en algunos iPhone), usa el archivo de arriba.</p>
+        {bookFile && <FileReady file={bookFile} label="Libro" onDone={() => setBookFile(null)} />}
         {note && <p class="small" role="status">{note}</p>}
       </section>
       <h2 class="print-only">Roma · 30 de octubre – 3 de noviembre de 2026</h2>

@@ -6,7 +6,7 @@ import type { OfflineStatus } from '@/lib/offline-data';
 
 const NOW = 1_800_000_000_000;
 const full = (over: Partial<OfflineStatus> = {}): OfflineStatus => ({
-  map: { at: NOW - 1000, tiles: 10, bytes: 1 }, graph: { at: NOW - 1000, nodes: 1, streets: 1 }, places: { at: NOW - 1000, count: 1 }, pois: { at: NOW - 1000, count: 1 },
+  map: { at: NOW - 1000, tiles: 10, bytes: 1, current: true }, graph: { at: NOW - 1000, nodes: 1, streets: 1 }, places: { at: NOW - 1000, count: 1 }, pois: { at: NOW - 1000, count: 1 },
   metro: { at: NOW - 1000, stations: 60 }, relief: { at: NOW - 1000 }, photos: { at: NOW - 1000, have: 20, total: 20 },
   weather: NOW, blobs: { total: 3, missing: 0 }, ...over,
 });
@@ -18,9 +18,14 @@ describe('stagesNeeded (descarga automática)', () => {
     expect(stagesNeeded({ ...full(), map: undefined, graph: undefined, places: undefined, pois: undefined, blobs: { total: 2, missing: 2 } }, NOW)).toEqual(['map', 'graph', 'places', 'pois', 'files']);
   });
   it('renueva lo viejo: el mapa a los 30 días y los datos a las 2 semanas', () => {
-    expect(stagesNeeded(full({ map: { at: NOW - MAP_MAX_AGE - 1, tiles: 1, bytes: 1 } }), NOW)).toEqual(['map']);
+    expect(stagesNeeded(full({ map: { at: NOW - MAP_MAX_AGE - 1, tiles: 1, bytes: 1, current: true } }), NOW)).toEqual(['map']);
     expect(stagesNeeded(full({ graph: { at: NOW - DATA_MAX_AGE - 1, nodes: 1, streets: 1 } }), NOW)).toEqual(['graph']);
-    expect(stagesNeeded(full({ map: { at: NOW - DATA_MAX_AGE - 1, tiles: 1, bytes: 1 } }), NOW)).toEqual([]);
+    expect(stagesNeeded(full({ map: { at: NOW - DATA_MAX_AGE - 1, tiles: 1, bytes: 1, current: true } }), NOW)).toEqual([]);
+  });
+  it('vuelve a bajar el mapa si la versión fijada no es la descargada o quedó incompleta', () => {
+    expect(stagesNeeded(full({ map: { at: NOW - 1000, tiles: 10, bytes: 1, current: false } }), NOW)).toEqual(['map']);
+    expect(stagesNeeded(full({ map: { at: NOW - 1000, tiles: 90, total: 100, bytes: 1, current: true } }), NOW)).toEqual(['map']);
+    expect(stagesNeeded(full({ map: { at: NOW - 1000, tiles: 99, total: 100, bytes: 1, current: true } }), NOW)).toEqual([]);
   });
   it('baja solo los archivos que faltan', () => expect(stagesNeeded(full({ blobs: { total: 5, missing: 1 } }), NOW)).toEqual(['files']));
 });

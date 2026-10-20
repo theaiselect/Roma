@@ -3,11 +3,13 @@ import { Icon } from '@/components/Icon';
 import { ShowCard } from '@/components/ShowCard';
 import { hotel } from '@/data/emergency';
 import { useLocal } from '@/lib/local';
+import { usePrivate } from '@/lib/private';
 
 /** Dirección del hotel para enseñar a un taxista, copiar o abrir en el mapa. */
 export function HotelCard() {
   const [show, setShow] = useState(false);
   const [copied, setCopied] = useState(false);
+  const priv = usePrivate()?.hotel;
   const copy = async () => {
     try { await navigator.clipboard.writeText(hotel.addressIt); setCopied(true); window.setTimeout(() => setCopied(false), 2000); } catch { /* el botón «Enseñar» sirve igual */ }
   };
@@ -19,6 +21,9 @@ export function HotelCard() {
         <button type="button" class="btn primary" onClick={() => setShow(true)}><Icon name="speaker" /> Enseñar al taxista</button>
         <button type="button" class="btn" onClick={() => void copy()}>{copied ? 'Copiado' : 'Copiar dirección'}</button>
       </div>
+      {priv?.bookingRef
+        ? <p class="small">Reserva {priv.bookingSite ?? ''}: <b class="num">{priv.bookingRef}</b>{priv.pin ? <> · PIN <b class="num">{priv.pin}</b></> : null}</p>
+        : <p class="small muted">El número de reserva aparece aquí cuando el móvil sincroniza con la contraseña del viaje.</p>}
       <p class="small muted">Recepción {hotel.reception}. De noche está cerrada: pregunta al hotel cómo dejar la llave.</p>
       {show && <ShowCard it={hotel.taxiIt} es={`${hotel.name} · ${hotel.addressIt}`} onClose={() => setShow(false)} />}
     </section>

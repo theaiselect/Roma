@@ -37,11 +37,23 @@ function memoryApi(): Plugin {
             const who = headers.get('x-who');
             return send(auth!.json(200, await core.handlePull(store, { since: Number(url.searchParams.get('since') ?? 0) || 0, ids, who: who === 'jesus' || who === 'lucia' ? who : null }, Date.now())));
           }
-          return send(auth!.json(200, await core.handlePush(store, JSON.parse(body.toString() || '{}'), Date.now())));
+          return send(auth!.json(200, await core.handlePush(store, JSON.parse(body.toString() || '{}'), () => Date.now())));
+        }
+        if (url.pathname === '/api/private') {
+          const priv = (await server.ssrLoadModule('/api/_private.ts')) as typeof import('./api/_private');
+          return send(auth!.json(200, priv.privateData));
         }
         if (url.pathname === '/api/blob') {
+          const rules = (await server.ssrLoadModule('/api/_blobRules.ts')) as typeof import('./api/_blobRules');
           const id = url.searchParams.get('id') ?? '';
-          if (req.method === 'POST') { blobs.set(id, { type: headers.get('content-type') ?? 'application/octet-stream', buf: body }); return send(auth!.json(200, { ok: true, id })); }
+          if (req.method === 'DELETE') { blobs.delete(id); return send(auth!.json(200, { ok: true })); }
+          if (req.method === 'POST') {
+            const type = headers.get('content-type') ?? '';
+            if (!rules.blobTypeOk(type)) return send(auth!.json(415, { error: 'bad_type' }));
+            if (body.length > rules.MAX_BLOB_BYTES) return send(auth!.json(413, { error: 'too_large' }));
+            blobs.set(id, { type, buf: body });
+            return send(auth!.json(200, { ok: true, id }));
+          }
           const b = blobs.get(id);
           return send(b ? new Response(b.buf, { headers: { 'content-type': b.type } }) : auth!.json(404, { error: 'not_found' }));
         }

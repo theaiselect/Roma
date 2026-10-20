@@ -10,7 +10,8 @@ import { getSettings, resetLocalSettings, updateSettings, useSettings } from '@/
 import { requestSync, syncDisabledReason } from '@/lib/sync';
 import { syncInfo } from '@/lib/sync-status';
 import { italianVoice } from '@/lib/tts';
-import { downloadBackup, restoreBackup } from '@/lib/backup';
+import { markBackupDone, prepareBackup, restoreBackup } from '@/lib/backup';
+import { canShareFile, downloadFile, FileReady } from '@/components/FileShare';
 import { checkConnection, type ConnectionReport } from '@/lib/connection';
 import { useLocal } from '@/lib/local';
 import { useOnline } from '@/lib/online';
@@ -71,6 +72,17 @@ export function SettingsScreen() {
   const [report, setReport] = useState<ConnectionReport | null>(null);
   const [upd, setUpd] = useState<UpdateResult | 'checking' | null>(null);
   const online = useOnline();
+  const [preparing, setPreparing] = useState(false);
+  const [backupFile, setBackupFile] = useState<File | null>(null);
+  // Primero se prepara (puede tardar con muchas fotos); si el móvil comparte archivos, el envío va en otro toque.
+  const exportBackup = async () => {
+    setPreparing(true);
+    try {
+      const f = await prepareBackup();
+      if (canShareFile(f)) setBackupFile(f);
+      else { downloadFile(f); markBackupDone(); }
+    } finally { setPreparing(false); }
+  };
   const profile = (s.profile ?? 'jesus') as Who;
 
   const test = () => {
@@ -132,7 +144,8 @@ export function SettingsScreen() {
         <h2>Copia de seguridad</h2>
         <p class="small" role="status">{lastBackup ? `Última copia guardada: ${new Date(lastBackup).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}.` : 'Todavía no has guardado ninguna copia en este móvil.'}</p>
         <p class="small muted">Todo lo vuestro (gastos, diario, fotos, entradas, casillas) en un archivo. Guárdalo en Drive o envíatelo por WhatsApp.</p>
-        <button type="button" class="btn" onClick={() => void downloadBackup()}>Exportar copia</button>
+        <button type="button" class="btn" disabled={preparing} onClick={() => void exportBackup()}>{preparing ? 'Preparando la copia…' : 'Exportar copia'}</button>
+        {backupFile && <FileReady file={backupFile} label="Copia" onDone={() => { markBackupDone(); setBackupFile(null); }} />}
         <label class="btn ghost">
           Restaurar desde un archivo
           <input type="file" accept="application/json,.json" class="sr-only" onChange={(e) => {

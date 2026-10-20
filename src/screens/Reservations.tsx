@@ -8,7 +8,10 @@ import type { Reservation, ReservationStatus } from '@/data/types';
 import { BackTitle } from '@/screens/More';
 import { setCheck, useChecks } from '@/lib/checks';
 import { useNow } from '@/lib/clock';
-import { getBlob, putBlob, remove, save, useKind, type Entity } from '@/lib/db';
+import { getBlob, putBlob, remove, save, useBlobErrors, useKind, type Entity } from '@/lib/db';
+import { compressImage } from '@/lib/image';
+import { isPdf, renderPdfPages } from '@/lib/pdf-pages';
+import { uploadType } from '@/lib/sync';
 import { countReservations, reservationDate, sortReservations, STATUS_LABEL, untilText } from '@/lib/reservations';
 import { ensureBlob } from '@/lib/sync';
 import { showTicket } from '@/lib/ticket-view';
@@ -20,6 +23,33 @@ export interface TicketEntity extends Entity {
   blobId: string;
   mime: string;
   name: string;
+  /** Páginas del PDF ya pasadas a imagen: se ven igual en los dos móviles, sin conexión. */
+  pageBlobIds?: string[];
+}
+
+const MAX_SHARE = 4 * 1024 * 1024;
+const mb = (n: number) => `${(n / 1048576).toLocaleString('es-ES', { maximumFractionDigits: 1 })} MB`;
+
+/**
+ * Guarda una entrada. Las fotos se reducen (sin que el QR deje de leerse) y los PDF se pasan también a
+ * imágenes de sus páginas. Devuelve un aviso si algo no podrá llegar al otro móvil.
+ */
+export async function addTicketFile(reservationId: string, f: File): Promise<string | null> {
+  if (isPdf(f.type, f.name)) {
+    const pdf = f.type ? f : new Blob([f], { type: 'application/pdf' });
+    const blobId = await putBlob(pdf);
+    let pageBlobIds: string[] = [];
+    try { pageBlobIds = await Promise.all((await renderPdfPages(pdf)).map((b) => putBlob(b))); } catch { /* PDF raro: se queda solo el original */ }
+    await save({ kind: 'ticket', reservationId, blobId, mime: 'application/pdf', name: f.name, ...(pageBlobIds.length ? { pageBlobIds } : {}) });
+    if (f.size > MAX_SHARE) return pageBlobIds.length
+      ? `«${f.name}» pesa ${mb(f.size)}: al otro móvil le llegan sus páginas como imagen (el PDF se queda en este).`
+      : `«${f.name}» pesa ${mb(f.size)} y no se ha podido convertir: no llegará al otro móvil. Haz una captura del QR y añádela.`;
+    return null;
+  }
+  const img = await compressImage(f, 2400, 0.9);
+  const blobId = await putBlob(img);
+  await save({ kind: 'ticket', reservationId, blobId, mime: uploadType(img.type), name: f.name });
+  return img.size > MAX_SHARE ? `«${f.name}» pesa ${mb(img.size)} y no llegará al otro móvil. Haz una captura del QR y añádela.` : null;
 }
 
 const CLS: Record<ReservationStatus, string> = { bought: 'ok', pending: 'warn', todo: 'warn', soldout: 'bad' };
@@ -40,16 +70,18 @@ export async function shareTicket(t: TicketEntity): Promise<void> {
 export function TicketList({ reservationId }: { reservationId: string }) {
   const tickets = (useKind<TicketEntity>('ticket') ?? []).filter((t) => t.reservationId === reservationId);
   const [busy, setBusy] = useState(false);
+  const [notes, setNotes] = useState<string[]>([]);
+  const errors = useBlobErrors(tickets.flatMap((t) => [t.blobId, ...(t.pageBlobIds ?? [])]));
   const add = async (files: FileList | null) => {
     if (!files?.length) return;
     setBusy(true);
+    const out: string[] = [];
     try {
-      for (const f of Array.from(files)) {
-        const blobId = await putBlob(f);
-        await save({ kind: 'ticket', reservationId, blobId, mime: f.type || 'application/octet-stream', name: f.name });
-      }
-    } finally { setBusy(false); }
+      for (const f of Array.from(files)) { const n = await addTicketFile(reservationId, f); if (n) out.push(n); }
+    } finally { setBusy(false); setNotes(out); }
   };
+  // Una entrada no llega al otro móvil si su archivo (o, en un PDF con páginas, alguna página) no se ha subido.
+  const unshared = (t: TicketEntity) => (t.pageBlobIds?.length ? t.pageBlobIds.some((id) => errors.has(id)) : errors.has(t.blobId));
   return (
     <div class="stack" style={{ gap: '0.4rem' }}>
       {tickets.map((t) => (
@@ -57,8 +89,10 @@ export function TicketList({ reservationId }: { reservationId: string }) {
           <button type="button" class="btn" onClick={() => void openTicket(t, tickets)}><Icon name="file" /> {t.name.length > 22 ? `${t.name.slice(0, 20)}…` : t.name}</button>
           <button type="button" class="btn" aria-label={`Compartir ${t.name}`} onClick={() => void shareTicket(t)}><Icon name="share" /></button>
           <button type="button" class="btn ghost" aria-label={`Quitar ${t.name}`} onClick={() => { if (confirm('¿Quitar este archivo de los dos móviles?')) void remove(t.id); }}><Icon name="trash" /></button>
+          {unshared(t) && <p class="small pending" role="status" style={{ flexBasis: '100%' }}>⚠️ No se ha podido compartir con el otro móvil ({errors.get(t.blobId) === 'too_large' ? 'demasiado grande' : 'formato no admitido'}). Haz una captura del QR y añádela.</p>}
         </div>
       ))}
+      {notes.map((n) => <p key={n} class="small pending" role="status">⚠️ {n}</p>)}
       <label class="btn ghost" style={{ justifyContent: 'flex-start' }}>
         <Icon name="plus" /> {busy ? 'Guardando…' : 'Añadir QR o PDF'}
         <input type="file" accept="image/*,application/pdf" multiple class="sr-only" onChange={(e) => { const el = e.target as HTMLInputElement; void add(el.files).then(() => { el.value = ''; }); }} />
