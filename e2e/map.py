@@ -151,7 +151,7 @@ with sync_playwright() as p:
     # Toque romántico: al llegar a una parada de hoy sale solo «Habéis llegado» con corazones
     tgt=pg.evaluate("(()=>{const f=window.__romaMap.querySourceFeatures('pins').filter(f=>f.properties.kind==='stop'&&f.properties.status==='todo')[0]||window.__romaMap.querySourceFeatures('pins').filter(f=>f.properties.kind==='stop')[0];return {lng:f.geometry.coordinates[0],lat:f.geometry.coordinates[1],id:f.properties.id,short:f.properties.short}})()")
     ctx.set_geolocation({'latitude':tgt['lat'],'longitude':tgt['lng']}); pg.wait_for_timeout(2200)
-    check('llegada: sale «Habéis llegado» al estar en una parada', pg.locator('.arrival').count()==1 and 'Habéis llegado' in pg.locator('.arrival').inner_text())
+    check('llegada: sale «Habéis llegado» al estar en una parada', pg.locator('.arrival').count()==1 and 'habéis llegado' in pg.locator('.arrival').inner_text().lower())
     check('llegada: corazones y frase cariñosa', pg.locator('.arrival .heartburst span').count()>=5 and pg.locator('.arrival-line').inner_text().strip()!='')
     check('llegada: atajos a la foto y al diario', pg.locator('.arrival').get_by_role('link',name=re.compile('Foto de recuerdo')).count()==1 and pg.locator('.arrival').get_by_role('link',name=re.compile('diario')).count()==1)
     pg.locator('.arrival').get_by_role('button',name='Hecho',exact=True).click(); pg.wait_for_timeout(700)

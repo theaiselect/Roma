@@ -6,6 +6,8 @@ export interface Settings {
   profile: Who | null;
   tripCode: string | null;
   theme: 'auto' | 'light' | 'dark';
+  /** 2 = rediseño «Notte romana» (oscuro por defecto). */
+  themeV?: number;
   largeText: boolean;
   onboarded: boolean;
   deviceId: string;
@@ -20,7 +22,7 @@ function uuid(): string {
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-const defaults = (): Settings => ({ profile: null, tripCode: null, theme: 'auto', largeText: false, onboarded: false, deviceId: uuid() });
+const defaults = (): Settings => ({ profile: null, tripCode: null, theme: 'dark', themeV: 2, largeText: false, onboarded: false, deviceId: uuid() });
 
 let cache: Settings | null = null;
 
@@ -29,7 +31,11 @@ export function getSettings(): Settings {
   let s = defaults();
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) s = { ...s, ...(JSON.parse(raw) as Partial<Settings>) };
+    if (raw) {
+      s = { ...s, ...(JSON.parse(raw) as Partial<Settings>) };
+      // Ajustes guardados antes del rediseño: pasan a la noche romana (se puede cambiar en Ajustes).
+      if (!s.themeV) { s.theme = 'dark'; s.themeV = 2; }
+    }
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch { /* sin almacenamiento: valores por defecto en memoria */ }
   cache = s;
@@ -49,6 +55,9 @@ export function applyAppearance(s: Settings = getSettings()): void {
   const root = document.documentElement;
   if (s.theme === 'auto') root.removeAttribute('data-theme');
   else root.setAttribute('data-theme', s.theme);
+  // Color de la barra del sistema según el tema que se ve.
+  const dark = s.theme === 'dark' || (s.theme === 'auto' && (typeof matchMedia !== 'function' || matchMedia('(prefers-color-scheme: dark)').matches));
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#17110F' : '#F7F1E8');
   if (s.largeText) root.setAttribute('data-text', 'large');
   else root.removeAttribute('data-text');
 }
@@ -66,4 +75,19 @@ export function useSettings(): Settings {
 export function resetLocalSettings(): void {
   cache = null;
   try { localStorage.removeItem(KEY); sessionStorage.clear(); } catch { /* ignore */ }
+}
+
+/** ¿Se está viendo la app en oscuro? (tema elegido o, en «Automático», el del sistema). */
+export function useDark(): boolean {
+  const s = useSettings();
+  const query = () => (typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null);
+  const [sys, setSys] = useState(() => query()?.matches ?? true);
+  useEffect(() => {
+    const mq = query();
+    if (!mq) return;
+    const on = () => setSys(mq.matches);
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  return s.theme === 'dark' || (s.theme === 'auto' && sys);
 }

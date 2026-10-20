@@ -5,6 +5,7 @@ import { placeById } from '@/data/places';
 import { days, luciaTrain, travellers, tripStart } from '@/data/trip';
 import { dayAlerts, type Alert } from '@/lib/alerts';
 import { useNow } from '@/lib/clock';
+import { directionsUrl } from '@/lib/maps';
 import { useSettings } from '@/lib/settings';
 import { formatDuration, nowState, type TimedStop } from '@/lib/schedule';
 import { useTimeline } from '@/lib/plan-state';
@@ -37,6 +38,32 @@ function Reunion({ tl, now, profile }: { tl: TimedStop[]; now: number; profile: 
     ? (luciaThere ? `Lucía te espera en Roma. Os veis en ${left}.` : `Lucía y tú, en Roma en ${left}.`)
     : (luciaThere ? `Jesús llega en ${left}. Ya casi.` : `Jesús y tú, en Roma en ${left}.`);
   return <section class="card stack" style={{ background: 'color-mix(in srgb, var(--rosa-romano) 22%, var(--tarjeta))' }}><p class="eyebrow">El reencuentro</p><h2>{text}</h2></section>;
+}
+
+/** La jornada de un vistazo: lo hecho, lo que toca ahora y lo que queda; la cena, en rosa. */
+function DayLine({ stops, now, nextId }: { stops: TimedStop[]; now: number; nextId: string }) {
+  if (!stops.length) return null;
+  return (
+    <section class="dayline" aria-label="El día de hoy">
+      <p class="eyebrow muted-eyebrow">Hoy</p>
+      <ol>
+        {stops.map((st) => {
+          const done = st.at !== null && st.at + 45 * 60_000 < now && st.id !== nextId;
+          const isNext = st.id === nextId;
+          const dinner = /^cena/i.test(st.title);
+          return (
+            <li key={st.id} class={`${done ? 'done' : ''}${isNext ? ' next' : ''}${dinner ? ' dinner' : ''}`.trim()}>
+              <a href={`/plan/${st.day}#${st.id}`} aria-current={isNext ? 'step' : undefined}>
+                <span class="dl-time num">{st.start ?? '—'}</span>
+                {dinner ? <Icon name="heart" size={14} /> : <span class="dl-dot" aria-hidden="true" />}
+                <span class="dl-title">{st.title}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
 }
 
 export function Today() {
@@ -92,38 +119,48 @@ export function Today() {
   const next = state.next;
   const nextPlace = next.placeId ? placeById.get(next.placeId) : undefined;
   const alerts = activeDay ? dayAlerts(activeDay.day, weekdayOf(activeDay.date)) : [];
+  const dayStops = activeDay ? tl.filter((st) => st.day === activeDay.day && st.start) : [];
+  const weekday = activeDay?.label.split(' ')[0] ?? '';
+  const dateText = activeDay ? activeDay.label.slice(weekday.length + 1) : 'Hoy';
 
   return (
-    <div class="stack-lg">
+    <div class="stack-lg today">
+      {activeDay && <div class="today-numeral" aria-hidden="true">{activeDay.roman}</div>}
       {firstDayAutoFlip && <Logo hero autoFlip />}
-      <div class="page-title">
-        <h1>{activeDay ? `${activeDay.roman} · ${activeDay.label.split(' ')[0]}` : 'Hoy'}</h1>
-        <span class="muted num">{parts.time}</span>
-      </div>
+      <header class="today-head">
+        <div class="spread">
+          <span class="eyebrow">{weekday}</span>
+          {activeDay && <span class="daychip"><Icon name="heart" size={14} /> Día {activeDay.day} de {days.length}</span>}
+        </div>
+        <h1>{dateText}</h1>
+        {activeDay?.holiday && <p class="small muted">{activeDay.holiday}</p>}
+      </header>
 
       <Reunion tl={tl} now={now} profile={settings.profile} />
 
       <section class="card current hero-next" aria-live="polite">
-        <p class="eyebrow">Lo siguiente · {next.start}</p>
+        <div class="spread">
+          <p class="eyebrow">Siguiente · {state.msToNext !== null && state.msToNext <= 30_000 ? 'ahora' : `en ${formatDuration(state.msToNext ?? 0)}`}</p>
+          <span class="muted num small">{next.start}</span>
+        </div>
         <h2>{next.title}</h2>
-        <p class="countdown num">{formatDuration(state.msToNext ?? 0)}</p>
+        {(next.pending || next.note || nextPlace?.address) && (
+          <div class="row">
+            {next.pending && <span class="chip warn">Por confirmar: {next.pending}</span>}
+          </div>
+        )}
         {nextPlace?.address && <p class="small muted">{nextPlace.address}</p>}
         {next.note && <p class="small">{next.note}</p>}
-        {next.pending && <p class="small pending">⚠️ Pendiente de confirmar: {next.pending}</p>}
-        <div class="stop-actions">
-          {nextPlace && <a class="btn primary" href={`/plan/${next.day}#${next.id}`}>Ver en el plan</a>}
+        <div class="stop-actions hero-actions">
+          {nextPlace && <a class="btn primary" href={directionsUrl(nextPlace)} target="_blank" rel="noopener"><Icon name="map" /> Cómo llegar</a>}
+          {nextPlace && <a class="btn" href={`/plan/${next.day}#${next.id}`}>Ver plan</a>}
           {(next.day === 1 || next.day === 5) && next.leg && <a class="btn" href={`/plan/${next.day}`}><Icon name="train" /> Modo día de viaje</a>}
         </div>
       </section>
 
       <AlertList alerts={alerts} />
 
-      {state.then.length > 0 && (
-        <section class="stack">
-          <h2>Después</h2>
-          {state.then.map((s) => <StopCard key={s.id} stop={s} now={now} />)}
-        </section>
-      )}
+      <DayLine stops={dayStops} now={now} nextId={next.id} />
 
       <TodayExtras now={now} day={activeDay?.day ?? null} />
     </div>

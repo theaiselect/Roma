@@ -3,6 +3,7 @@ import type { Map as MlMap, GeoJSONSource, LngLatBoundsLike } from 'maplibre-gl'
 import type { LatLng } from '@/lib/geo';
 import type { MetroData } from '@/lib/metro-map';
 import { ROME_CENTER, STYLE_URL, type Route } from '@/lib/osm';
+import { darkenBasemap } from '@/lib/map-theme';
 
 export type PinKind = 'stop' | 'dot' | 'heart' | 'poi' | 'hotel' | 'found' | 'saved';
 export type PinStatus = 'todo' | 'done' | 'now' | 'next';
@@ -15,6 +16,8 @@ interface Props {
   /** Rutas alternativas (en gris, se pueden tocar para elegirlas). */
   alts: { i: number; coords: [number, number][] }[];
   onPickAlt: (i: number) => void;
+  /** Mapa nocturno (oro sobre oscuro). */
+  dark: boolean;
   /** Edificios en 3D y el mapa inclinado. */
   threeD: boolean;
   /** Líneas y estaciones del metro (null = ocultas). */
@@ -38,12 +41,12 @@ interface Props {
 
 const empty = { type: 'FeatureCollection', features: [] } as const;
 
-function heartImage(color: string): ImageData {
+function heartImage(color: string, edge = '#fff'): ImageData {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   const g = c.getContext('2d')!;
   g.fillStyle = color;
-  g.strokeStyle = '#fff';
+  g.strokeStyle = edge;
   g.lineWidth = 5;
   g.beginPath();
   g.moveTo(32, 56);
@@ -77,11 +80,11 @@ function starImage(): ImageData {
   return g.getImageData(0, 0, 64, 64);
 }
 
-function arrowImage(): ImageData {
+function arrowImage(fill = '#4A7FA8'): ImageData {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#4A7FA8';
+  g.fillStyle = fill;
   g.strokeStyle = '#fff';
   g.lineWidth = 4;
   g.beginPath();
@@ -100,12 +103,12 @@ function webgl(): boolean {
 }
 
 /** Mapa vectorial interactivo (OpenFreeMap). Se carga bajo demanda: MapLibre pesa ~250 KB comprimido. */
-export function RomaMap({ pins, me, route, alts, onPickAlt, threeD, metro, order, fitKey, focus, heading, follow, onPick, onLongPress, onBackground, onUserMove, onFail }: Props) {
+export function RomaMap({ pins, me, route, alts, onPickAlt, dark, threeD, metro, order, fitKey, focus, heading, follow, onPick, onLongPress, onBackground, onUserMove, onFail }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const ready = useRef(false);
-  const latest = useRef({ pins, me, route, alts, metro, threeD, order, fitKey, heading });
-  latest.current = { pins, me, route, alts, metro, threeD, order, fitKey, heading };
+  const latest = useRef({ pins, me, route, alts, metro, threeD, order, fitKey, heading, dark });
+  latest.current = { pins, me, route, alts, metro, threeD, order, fitKey, heading, dark };
   const pick = useRef(onPick);
   pick.current = onPick;
   const cb = useRef({ onLongPress, onUserMove, onBackground, onPickAlt });
@@ -159,11 +162,13 @@ export function RomaMap({ pins, me, route, alts, onPickAlt, threeD, metro, order
         // Sin red y sin mapa descargado: el estilo no llega y volvemos al esquema.
         if (!ready.current && /style|fetch|Failed|network/i.test(String((e as unknown as { error?: { message?: string } }).error?.message ?? ''))) onFail();
       });
+      const dk = latest.current.dark;
+      if (dk) m.on('style.load', () => darkenBasemap(m as unknown as Parameters<typeof darkenBasemap>[0]));
       m.on('load', () => {
         ready.current = true;
         window.clearTimeout(timer);
-        m.addImage('heart', heartImage('#C0583A'), { pixelRatio: 2 });
-        m.addImage('arrow', arrowImage(), { pixelRatio: 2 });
+        m.addImage('heart', dk ? heartImage('#E8B4B0', '#17110F') : heartImage('#C0583A'), { pixelRatio: 2 });
+        m.addImage('arrow', arrowImage(dk ? '#6FA8DC' : '#4A7FA8'), { pixelRatio: 2 });
         m.addImage('star', starImage(), { pixelRatio: 2 });
         m.addSource('route', { type: 'geojson', data: empty });
         m.addSource('alts', { type: 'geojson', data: empty });
@@ -179,16 +184,16 @@ export function RomaMap({ pins, me, route, alts, onPickAlt, threeD, metro, order
           const firstLabel = st.layers?.find((l) => l.type === 'symbol')?.id;
           if (vec) m.addLayer({ id: 'buildings-3d', type: 'fill-extrusion', source: vec, 'source-layer': 'building', minzoom: 14,
             layout: { visibility: latest.current.threeD ? 'visible' : 'none' },
-            paint: { 'fill-extrusion-color': '#E3DAD0', 'fill-extrusion-opacity': 0.88, 'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 9], 'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0] } }, firstLabel);
+            paint: { 'fill-extrusion-color': dk ? '#3A2D27' : '#E3DAD0', 'fill-extrusion-opacity': 0.88, 'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 9], 'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0] } }, firstLabel);
         } catch { /* sin edificios en 3D: el mapa sigue plano */ }
-        m.addLayer({ id: 'metro-casing', type: 'line', source: 'metro-lines', minzoom: 10.5, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 4, 16, 8], 'line-opacity': 0.9 } });
+        m.addLayer({ id: 'metro-casing', type: 'line', source: 'metro-lines', minzoom: 10.5, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': dk ? '#17110F' : '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 4, 16, 8], 'line-opacity': 0.9 } });
         m.addLayer({ id: 'metro-line', type: 'line', source: 'metro-lines', minzoom: 10.5, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2, 16, 5] } });
-        m.addLayer({ id: 'metro-station', type: 'circle', source: 'metro-stations', minzoom: 12.5, paint: { 'circle-color': '#fff', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12.5, 3, 16, 7], 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 2.5 } });
-        m.addLayer({ id: 'metro-name', type: 'symbol', source: 'metro-stations', minzoom: 14, layout: { 'text-field': ['concat', 'M ', ['get', 'name']], 'text-font': ['Noto Sans Bold'], 'text-size': 11.5, 'text-anchor': 'top', 'text-offset': [0, 0.9], 'text-max-width': 8 }, paint: { 'text-color': '#2B2522', 'text-halo-color': '#fff', 'text-halo-width': 1.8 } });
-        m.addLayer({ id: 'alts', type: 'line', source: 'alts', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#9AA7B2', 'line-width': 6, 'line-opacity': 0.85 } });
+        m.addLayer({ id: 'metro-station', type: 'circle', source: 'metro-stations', minzoom: 12.5, paint: { 'circle-color': dk ? '#F3E9DD' : '#fff', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12.5, 3, 16, 7], 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 2.5 } });
+        m.addLayer({ id: 'metro-name', type: 'symbol', source: 'metro-stations', minzoom: 14, layout: { 'text-field': ['concat', 'M ', ['get', 'name']], 'text-font': ['Noto Sans Bold'], 'text-size': 11.5, 'text-anchor': 'top', 'text-offset': [0, 0.9], 'text-max-width': 8 }, paint: { 'text-color': dk ? '#F3E9DD' : '#2B2522', 'text-halo-color': dk ? '#17110F' : '#fff', 'text-halo-width': 1.8 } });
+        m.addLayer({ id: 'alts', type: 'line', source: 'alts', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': dk ? '#8F7F73' : '#9AA7B2', 'line-width': 6, 'line-opacity': 0.85 } });
         m.addLayer({ id: 'order-line', type: 'line', source: 'order', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 3.5, 'line-opacity': 0.85, 'line-dasharray': [1.2, 1.8] } });
-        m.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#fff', 'line-width': 9 } });
-        m.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#4A7FA8', 'line-width': 5 } });
+        m.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': dk ? '#17110F' : '#fff', 'line-width': 9 } });
+        m.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': dk ? '#E8B95A' : '#4A7FA8', 'line-width': 5 } });
         // Aro suave alrededor de la parada en curso o la siguiente: se ve de un vistazo «por dónde vamos».
         m.addLayer({ id: 'pins-halo', type: 'circle', source: 'pins', filter: ['in', ['get', 'status'], ['literal', ['now', 'next']]],
           paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.28, 'circle-radius': 24 } });
@@ -202,13 +207,13 @@ export function RomaMap({ pins, me, route, alts, onPickAlt, threeD, metro, order
         m.addLayer({ id: 'pins-saved', type: 'symbol', source: 'pins', filter: ['==', ['get', 'kind'], 'saved'], layout: { 'icon-image': 'star', 'icon-size': 0.5, 'icon-allow-overlap': true, 'icon-offset': ['case', ['get', 'badge'], ['literal', [30, -30]], ['literal', [0, 0]]] } });
         m.addLayer({ id: 'pins-label', type: 'symbol', source: 'pins', filter: ['!=', ['get', 'short'], ''],
           layout: { 'text-field': ['get', 'short'], 'text-font': ['Noto Sans Bold'], 'text-size': ['match', ['get', 'status'], 'now', 16, 'next', 16, 14], 'text-allow-overlap': true, 'text-ignore-placement': true },
-          paint: { 'text-color': '#fff' } });
+          paint: { 'text-color': dk ? '#1B130F' : '#fff' } });
         // Nombre de la parada solo al acercarse: de lejos solo números, para no saturar.
         m.addLayer({ id: 'pins-name', type: 'symbol', source: 'pins', minzoom: 15.2, filter: ['all', ['==', ['get', 'kind'], 'stop'], ['!=', ['get', 'name'], '']],
           layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 11.5, 'text-anchor': 'top', 'text-offset': [0, 1.5], 'text-max-width': 9 },
-          paint: { 'text-color': '#2B2522', 'text-halo-color': '#fff', 'text-halo-width': 1.8 } });
-        m.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-color': '#4A7FA8', 'circle-opacity': 0.22, 'circle-radius': 26 } });
-        m.addLayer({ id: 'me-dot', type: 'circle', source: 'me', paint: { 'circle-color': '#4A7FA8', 'circle-radius': 9, 'circle-stroke-color': '#fff', 'circle-stroke-width': 3.5 } });
+          paint: { 'text-color': dk ? '#F3E9DD' : '#2B2522', 'text-halo-color': dk ? '#17110F' : '#fff', 'text-halo-width': 1.8 } });
+        m.addLayer({ id: 'me-halo', type: 'circle', source: 'me', paint: { 'circle-color': dk ? '#6FA8DC' : '#4A7FA8', 'circle-opacity': 0.25, 'circle-radius': 26 } });
+        m.addLayer({ id: 'me-dot', type: 'circle', source: 'me', paint: { 'circle-color': dk ? '#6FA8DC' : '#4A7FA8', 'circle-radius': 9, 'circle-stroke-color': '#fff', 'circle-stroke-width': 3.5 } });
         // Flecha de rumbo sobre el punto azul: gira con la dirección en la que caminas.
         m.addLayer({ id: 'me-arrow', type: 'symbol', source: 'me', filter: ['>=', ['get', 'heading'], 0],
           layout: { 'icon-image': 'arrow', 'icon-size': 0.5, 'icon-rotate': ['get', 'heading'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map', 'icon-offset': [0, -22], 'icon-allow-overlap': true } });

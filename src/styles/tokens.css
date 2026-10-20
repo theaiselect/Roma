@@ -1,53 +1,84 @@
+/* «Notte romana»: noche cálida, oro y rosa romano. Es el aspecto por defecto;
+   el tema «Día» (marfil) y «Automático» siguen disponibles en Ajustes. */
 :root {
-  --terracotta: #C0583A;
-  --ocra: #D9A441;
+  --terracotta: #D9A441;      /* acento: texto, filetes, enlaces (oro) */
+  --oro: #D9A441;             /* relleno de botones y marcas */
+  --on-oro: #1B130F;          /* texto sobre el oro */
+  --ocra: #E8B95A;
   --rosa-romano: #E8B4B0;
-  --marmol: #F7F3EE;
-  --tinta: #2B2522;
-  --pino: #4E6B4A;
-  --vino: #7A2E3A;
-  --tinta-suave: #5E544E;
-  --linea: #E3DAD0;
-  --tarjeta: #FFFFFF;
+  --marmol: #17110F;          /* fondo */
+  --nav: #120D0B;             /* barra inferior */
+  --tinta: #F3E9DD;
+  --pino: #8FB08A;
+  --vino: #E08A96;            /* texto de error / aviso fuerte */
+  --vino-fondo: #7A2E3A;      /* relleno de error */
+  --tinta-suave: #B7A79A;
+  --tenue: #8F7F73;
+  --linea: #3A2A24;
+  --linea-fuerte: #5A4338;
+  --tarjeta: #241A17;
+  --tarjeta-2: #2C2320;
+  --numeral: #2B1F1A;         /* el «II» gigante del fondo */
+  --on-pin: #1B130F;          /* número dentro de las chinchetas del mapa */
 
   --font-serif: 'Cormorant Garamond', 'Times New Roman', serif;
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  --radius: 16px;
+  --radius: 22px;
+  --radius-sm: 14px;
   --tap: 48px;
-  --sombra: 0 1px 2px rgba(43, 37, 34, 0.06), 0 6px 20px rgba(43, 37, 34, 0.08);
+  --sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
   --escala: 1;
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --terracotta: #E07A5C;
-    --ocra: #E8B95A;
-    --rosa-romano: #9C5F5B;
-    --marmol: #1E1A18;
-    --tinta: #F2ECE6;
-    --pino: #8FB08A;
-    --vino: #C7606F;
-    --tinta-suave: #BFB4AC;
-    --linea: #3A332F;
-    --tarjeta: #27221F;
-    --sombra: 0 1px 2px rgba(0, 0, 0, 0.3);
+/* Tema «Día»: marfil con oro bruñido. */
+:root[data-theme='light'] {
+  --terracotta: #8A5A0A;
+  --oro: #D9A441;
+  --on-oro: #1B130F;
+  --ocra: #B27A12;
+  --rosa-romano: #D98F8A;
+  --marmol: #F7F1E8;
+  --nav: #FFFDF8;
+  --tinta: #2B1F1A;
+  --pino: #4E6B4A;
+  --vino: #8E2F3F;
+  --vino-fondo: #7A2E3A;
+  --tinta-suave: #5E4F46;
+  --tenue: #7A6A5F;
+  --linea: #E3D6C4;
+  --linea-fuerte: #CDB99F;
+  --tarjeta: #FFFDF8;
+  --tarjeta-2: #F1E8DA;
+  --numeral: #EFE5D4;
+  --on-pin: #FFFFFF;
+  --sombra: 0 1px 2px rgba(43, 31, 26, 0.06), 0 8px 24px rgba(43, 31, 26, 0.1);
+  color-scheme: light;
+}
+
+/* «Automático»: sin atributo, sigue al sistema (claro u oscuro). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --terracotta: #8A5A0A;
+    --ocra: #B27A12;
+    --rosa-romano: #D98F8A;
+    --marmol: #F7F1E8;
+    --nav: #FFFDF8;
+    --tinta: #2B1F1A;
+    --pino: #4E6B4A;
+    --vino: #8E2F3F;
+    --tinta-suave: #5E4F46;
+    --tenue: #7A6A5F;
+    --linea: #E3D6C4;
+    --linea-fuerte: #CDB99F;
+    --tarjeta: #FFFDF8;
+    --tarjeta-2: #F1E8DA;
+    --numeral: #EFE5D4;
+    --on-pin: #FFFFFF;
+    --sombra: 0 1px 2px rgba(43, 31, 26, 0.06), 0 8px 24px rgba(43, 31, 26, 0.1);
+    color-scheme: light;
   }
-}
-
-:root[data-theme='dark'] {
-  --terracotta: #E07A5C;
-  --ocra: #E8B95A;
-  --rosa-romano: #9C5F5B;
-  --marmol: #1E1A18;
-  --tinta: #F2ECE6;
-  --pino: #8FB08A;
-  --vino: #C7606F;
-  --tinta-suave: #BFB4AC;
-  --linea: #3A332F;
-  --tarjeta: #27221F;
-  --sombra: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 :root[data-text='large'] { --escala: 1.25; }

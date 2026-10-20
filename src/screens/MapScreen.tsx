@@ -19,7 +19,7 @@ import { ARRIVED_M, advance, bearing, distanceToStep, isOffRoute, remainingM, sp
 import { canSpeak, keepAwake, speak, stopSpeaking } from '@/lib/speech';
 import { directionsUrl, isIOS } from '@/lib/maps';
 import { useTimeline } from '@/lib/plan-state';
-import { useSettings } from '@/lib/settings';
+import { useDark, useSettings } from '@/lib/settings';
 import { romeParts } from '@/lib/time';
 import { OfflineCard } from '@/components/OfflineCard';
 import { cachedPois, footRoute, footRouteVia, footRoutes, formatDuration, geocodeCached, nearest, refreshPois, reverseGeocode, searchPlaces, type Found, type Poi, type PoiKind, type Route } from '@/lib/osm';
@@ -29,9 +29,10 @@ import { overpass } from '@/lib/offline-data';
 import { elevationProfile, type Profile } from '@/lib/relief';
 import { toggleSaved, useSaved, type SavedEntity } from '@/lib/saved';
 
-const DAY_COLOR: Record<DayNum, string> = { 1: 'var(--terracotta)', 2: 'var(--ocra)', 3: 'var(--pino)', 4: 'var(--vino)', 5: 'var(--tinta-suave)' };
-// Los mapas no entienden variables CSS: mismos colores en hexadecimal.
-const DAY_HEX: Record<DayNum, string> = { 1: '#C0583A', 2: '#D9A441', 3: '#4E6B4A', 4: '#7A2E3A', 5: '#5E544E' };
+// Un color por día. Los mapas no entienden variables CSS, así que van en hexadecimal.
+const DAY_HEX_DARK: Record<DayNum, string> = { 1: '#D9A441', 2: '#E8B4B0', 3: '#8FB08A', 4: '#C7606F', 5: '#B7A79A' };
+const DAY_HEX_LIGHT: Record<DayNum, string> = { 1: '#C0583A', 2: '#B27A12', 3: '#4E6B4A', 4: '#7A2E3A', 5: '#5E544E' };
+const dayHex = (dark: boolean) => (dark ? DAY_HEX_DARK : DAY_HEX_LIGHT);
 
 interface Pin { id: string; lat: number; lng: number; day: DayNum | 0; label: string; short?: string; place?: Place; heart?: boolean }
 
@@ -57,6 +58,7 @@ function project(pins: LatLng[]): (p: LatLng) => { x: number; y: number } {
 
 /** Mapa esquemático sin conexión (F18 en versión ligera): posiciones reales de las paradas, sin calles. */
 function Schematic({ pins, me, onPick, labels }: { pins: Pin[]; me: LatLng | null; onPick: (p: Pin) => void; labels: boolean }) {
+  const dark = useDark();
   const all = me ? [...pins, me] : pins;
   if (!pins.length) return null;
   const proj = project(all);
@@ -72,7 +74,7 @@ function Schematic({ pins, me, onPick, labels }: { pins: Pin[]; me: LatLng | nul
         ) : (
           <g key={p.id} role="button" tabIndex={0} aria-label={p.label} onClick={() => onPick(p)} onKeyDown={(e) => { if (e.key === 'Enter') onPick(p); }} style={{ cursor: 'pointer' }}>
             <circle cx={x} cy={y} r="11" fill="transparent" />
-            <circle cx={x} cy={y} r="6" fill={p.day ? DAY_COLOR[p.day as DayNum] : 'var(--tinta)'} stroke="var(--tarjeta)" stroke-width="1.5" />
+            <circle cx={x} cy={y} r="6" fill={p.day ? dayHex(dark)[p.day as DayNum] : 'var(--tinta)'} stroke="var(--tarjeta)" stroke-width="1.5" />
             {labels && <text x={x + 9} y={y + 4}>{p.short}</text>}
           </g>
         );
@@ -162,6 +164,10 @@ export function MapScreen() {
   const [picked, setPicked] = useState<Picked | null>(null);
   const [walk, setWalk] = useState<Route | null>(null);
   const [walkAlts, setWalkAlts] = useState<Route[]>([]);
+  const appDark = useDark();
+  const [mapStyle, setMapStyle] = useLocal<'auto' | 'dark' | 'light'>('roma-map-style', 'auto');
+  const dark = mapStyle === 'auto' ? appDark : mapStyle === 'dark';
+  const DAY_HEX = dayHex(dark);
   const [threeD, setThreeD] = useLocal('roma-3d', false);
   const [showMetro, setShowMetro] = useLocal('roma-metro', false);
   const metro = useMetro();
@@ -277,12 +283,12 @@ export function MapScreen() {
   const mapPins: MapPin[] = useMemo(() => {
     const out: MapPin[] = dayStops.stops.map((s) => ({ id: `stop:${s.placeId}`, lat: s.lat, lng: s.lng, kind: 'stop', color: DAY_HEX[day as DayNum], short: String(s.n), name: shortTitle(s.title), label: `${s.n}. ${s.title}`, status: s.status }));
     for (const d of allDots) out.push({ id: `dot:${d.day}:${d.stop.placeId}`, lat: d.stop.lat, lng: d.stop.lng, kind: 'dot', color: DAY_HEX[d.day], short: '', label: d.stop.title });
-    for (const h of heartPins) out.push({ id: `heart:${h.id}`, lat: h.lat, lng: h.lng, kind: 'heart', color: '#C0583A', short: '', label: h.label });
+    for (const h of heartPins) out.push({ id: `heart:${h.id}`, lat: h.lat, lng: h.lng, kind: 'heart', color: dark ? '#E8B4B0' : '#C0583A', short: '', label: h.label });
     for (const sv of saved) {
       const onStop = dayStops.stops.some((st) => distanceM(st, sv) < 25) || (!!hotel && hotelInStops && distanceM(hotel, sv) < 25);
       out.push({ id: `saved:${sv.id}`, lat: sv.lat, lng: sv.lng, kind: 'saved', color: '#E0A526', short: '', label: sv.name, badge: onStop });
     }
-    if (hotel && !hotelInStops) out.push({ id: 'hotel', lat: hotel.lat, lng: hotel.lng, kind: 'hotel', color: '#2B2522', short: 'H', label: 'Hotel' });
+    if (hotel && !hotelInStops) out.push({ id: 'hotel', lat: hotel.lat, lng: hotel.lng, kind: 'hotel', color: dark ? '#F3E9DD' : '#2B2522', short: 'H', label: 'Hotel' });
     if (nearOnMap) for (const n of near) out.push({ id: `poi:${n.id}`, lat: n.lat, lng: n.lng, kind: 'poi', color: POI_HEX[filter], short: '', label: n.name });
     if (picked?.kind === 'found') out.push({ id: `found:${picked.found.id}`, lat: picked.found.lat, lng: picked.found.lng, kind: 'found', color: '#4A7FA8', short: '', label: picked.found.name });
     return out;
@@ -447,7 +453,7 @@ export function MapScreen() {
         )}
       </div>
       <div class="legend" role="group" aria-label="Día">
-        {days.map((d) => <button type="button" key={d.day} aria-pressed={day === d.day} onClick={() => { setDay(d.day); setPicked(null); clearRoute(); }}><i style={{ background: DAY_COLOR[d.day] }} />{d.roman} · {DAY_SHORT[d.day]}{today?.day === d.day ? ' · hoy' : ''}</button>)}
+        {days.map((d) => <button type="button" key={d.day} aria-pressed={day === d.day} onClick={() => { setDay(d.day); setPicked(null); clearRoute(); }}><i style={{ background: DAY_HEX[d.day] }} />{d.roman} · {DAY_SHORT[d.day]}{today?.day === d.day ? ' · hoy' : ''}</button>)}
         <button type="button" aria-pressed={day === 0} onClick={() => { setDay(0); setPicked(null); clearRoute(); }}>Todos</button>
       </div>
       {moment && <ArrivalMoment stop={moment} onClose={() => setMoment(null)} onDone={() => { for (const v of moment.visits) void setCheck('stops', v.id, true); setMoment(null); }} />}
@@ -457,8 +463,8 @@ export function MapScreen() {
           <Schematic pins={pins} me={me} onPick={(p) => { const stop = dayStops.stops.find((s) => s.placeId === p.id); setPicked(p.heart || !stop || !day ? { kind: 'heart', pin: p } : { kind: 'stop', stop, day }); }} labels={day !== 0} />
         </>
       ) : (
-        <div class={`mapwrap${navigating ? ' navmode' : ''}${sheetStop ? ' sheetopen' : ''}`}>
-          <RomaMap pins={mapPins} me={me} route={route} alts={navigating ? [] : walkAlts.flatMap((r, i) => (r === walk ? [] : [{ i, coords: r.coords }]))} onPickAlt={(i) => { const r = walkAlts[i]; if (r) setWalk(r); }} threeD={threeD} metro={showMetro ? metro : null} order={order} fitKey={`${day}|${nearOnMap ? filter : ''}`} focus={focus} heading={heading} follow={follow} onPick={onPick} onLongPress={(p) => void longPress(p)} onBackground={() => { if (picked?.kind === 'stop') setPicked(null); }} onUserMove={() => setFollow(false)} onFail={() => setFallback(true)} />
+        <div class={`mapwrap${navigating ? ' navmode' : ''}${sheetStop ? ' sheetopen' : ''}${dark ? ' mapdark' : ''}`}>
+          <RomaMap key={dark ? 'noche' : 'dia'} dark={dark} pins={mapPins} me={me} route={route} alts={navigating ? [] : walkAlts.flatMap((r, i) => (r === walk ? [] : [{ i, coords: r.coords }]))} onPickAlt={(i) => { const r = walkAlts[i]; if (r) setWalk(r); }} threeD={threeD} metro={showMetro ? metro : null} order={order} fitKey={`${day}|${nearOnMap ? filter : ''}`} focus={focus} heading={heading} follow={follow} onPick={onPick} onLongPress={(p) => void longPress(p)} onBackground={() => { if (picked?.kind === 'stop') setPicked(null); }} onUserMove={() => setFollow(false)} onFail={() => setFallback(true)} />
           {!navigating && !sheetStop && next && (
             <button type="button" class="nextchip" onClick={() => showStop(next, day as DayNum)} aria-label={`Siguiente parada: ${next.n}, ${next.title}`}>
               <span class="stopnum small" style={{ background: DAY_HEX[day as DayNum] }} aria-hidden="true">{next.n}</span>
@@ -485,6 +491,7 @@ export function MapScreen() {
           {navigating && !follow && <button type="button" class="btn locate recenter" onClick={() => setFollow(true)}><Icon name="walk" /> Recentrar</button>}
           <div class="mapctl" role="group" aria-label="Capas del mapa">
             <button type="button" class="btn" aria-pressed={threeD} onClick={() => setThreeD(!threeD)}>3D</button>
+            <button type="button" class="btn" aria-pressed={!dark} aria-label="Mapa claro" onClick={() => setMapStyle(dark ? 'light' : 'dark')}>{dark ? '☀ Día' : '☾ Noche'}</button>
             <button type="button" class="btn" aria-pressed={showMetro} onClick={toggleMetro}><Icon name="train" size={16} /> Metro</button>
           </div>
           <button type="button" class="btn locate" onClick={() => void whereAmI()} disabled={locating} aria-label="Dónde estoy"><Icon name="pin" /> {locating ? '…' : me ? 'Centrar en mí' : 'Dónde estoy'}</button>

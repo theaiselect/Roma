@@ -28,16 +28,19 @@ export function WeatherCard({ date }: { date: string }) {
   const day = f?.days.find((d) => d.date === date) ?? (f ? undefined : climateNormals([date]).days[0]);
   const sunset = romeParts(sunsetAt(date)).time;
   return (
-    <section class="card stack" style={{ gap: '0.35rem' }} aria-label="Tiempo y atardecer">
-      <div class="spread">
-        <div class="row">
-          <Icon name={day && isRainy(day.code, day.rainProb) ? 'rain' : 'sun'} />
+    <section class="stack" style={{ gap: '0.5rem' }} aria-label="Tiempo y atardecer">
+      <div class="tiles">
+        <div class="tile">
+          <Icon name={day && isRainy(day.code, day.rainProb) ? 'rain' : 'sun'} size={22} />
           {day
-            ? <b>{weatherText(day.code)} · <span class="num">{day.tmin}–{day.tmax} °C</span>{day.rainProb !== null ? <span class="muted num"> · lluvia {day.rainProb} %</span> : null}</b>
-            : <span class="muted">Sin previsión para este día todavía</span>}
+            ? <div class="tile-text"><b class="num">{day.tmin}–{day.tmax} °C</b><span>{weatherText(day.code)}{day.rainProb !== null ? ` · lluvia ${day.rainProb} %` : ''}</span></div>
+            : <div class="tile-text"><b>Sin previsión</b><span>para este día todavía</span></div>}
+        </div>
+        <div class="tile tile-sunset">
+          <Icon name="sun" size={22} />
+          <div class="tile-text"><b class="num">{sunset}</b><span>Atardecer a las {sunset}</span></div>
         </div>
       </div>
-      <p class="small"><Icon name="sun" size={16} /> Atardecer a las <b class="num">{sunset}</b></p>
       {f ? <p class="small muted">Previsión de Open-Meteo, {ageText(f.fetchedAt)}.</p> : <p class="small muted">Sin previsión guardada: es lo típico de Roma en estas fechas.</p>}
     </section>
   );

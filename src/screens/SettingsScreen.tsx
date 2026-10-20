@@ -94,7 +94,7 @@ export function SettingsScreen() {
       </section>
       <section class="card stack">
         <h2>Aspecto</h2>
-        <Seg label="Tema" value={s.theme} options={[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']]} onChange={(v) => updateSettings({ theme: v })} />
+        <Seg label="Tema" value={s.theme} options={[['auto', 'Automático'], ['light', 'Día (marfil)'], ['dark', 'Noche (por defecto)']]} onChange={(v) => updateSettings({ theme: v })} />
         <Seg label="Tamaño de letra" value={s.largeText ? 'big' : 'normal'} options={[['normal', 'Letra normal'], ['big', 'Letra grande']]} onChange={(v) => updateSettings({ largeText: v === 'big' })} />
       </section>
       <section class="card stack">

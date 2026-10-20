@@ -34,7 +34,7 @@ export function Us() {
       <nav class="legend scroll-row" aria-label="Secciones de Nosotros">
         {sections.map((s) => (
           <a key={s.id} href={`/nosotros/${s.id}`} class="btn" aria-current={s.id === section ? 'page' : undefined}
-            style={s.id === section ? { background: 'var(--terracotta)', borderColor: 'var(--terracotta)', color: '#fff', minHeight: '40px' } : { minHeight: '40px' }}>
+            style={s.id === section ? { background: 'var(--oro)', borderColor: 'var(--oro)', color: 'var(--on-oro)', minHeight: '40px' } : { minHeight: '40px' }}>
             <Icon name={s.icon} size={18} /> {s.label}
           </a>
         ))}
