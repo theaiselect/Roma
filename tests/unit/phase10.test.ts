@@ -63,3 +63,18 @@ describe('datos privados (reserva del hotel)', () => {
     expect(src).not.toMatch(/5044007987|PIN 5702|pin: '5702'/);
   });
 });
+
+describe('regalos privados', () => {
+  it('el otro no ve un regalo sin compartir; sí uno compartido; quien lo apunta, siempre', async () => {
+    const s = new MemoryStore();
+    const g = (id: string, shared?: boolean): ServerEntity => ({ id, kind: 'gift', updatedAt: 1, deviceId: 'A', author: 'jesus', forWhom: 'Lucía', what: 'Pendientes', where: 'Via Condotti', bought: false, ...(shared ? { shared } : {}) });
+    await handlePush(s, { entities: [g('gift-sorpresa'), g('gift-comun', true)] }, 1000);
+    const lucia = await handlePull(s, { since: 0, who: 'lucia' }, 2000);
+    const sorpresa = lucia.entities.find((x) => x.id === 'gift-sorpresa')!;
+    expect(sorpresa.what).toBeNull();
+    expect(sorpresa.locked).toBe(true);
+    expect(lucia.entities.find((x) => x.id === 'gift-comun')!.what).toBe('Pendientes');
+    const jesus = await handlePull(s, { since: 0, who: 'jesus' }, 2000);
+    expect(jesus.entities.find((x) => x.id === 'gift-sorpresa')!.what).toBe('Pendientes');
+  });
+});

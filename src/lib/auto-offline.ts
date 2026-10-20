@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { METRO_MAX_AGE } from '@/lib/metro-map';
 import { RELIEF_MAX_AGE } from '@/lib/relief';
-import { offlineStatus, prepareOffline, type OfflineStatus, type Stage } from '@/lib/offline-data';
+import { GRAPH_VERSION, offlineStatus, prepareOffline, type OfflineStatus, type Stage } from '@/lib/offline-data';
 
 // Lo necesario para ir sin conexión se descarga SOLO, en segundo plano, cuando hay conexión y la primera vez.
 // Con datos móviles espera a la wifi (a menos que se pida a mano); nunca interrumpe lo que estás haciendo.
@@ -14,7 +14,7 @@ export const PHOTOS_MAX_AGE = 45 * DAY;
 export function stagesNeeded(s: OfflineStatus, now: number): Stage[] {
   const out: Stage[] = [];
   if (!s.map || now - s.map.at > MAP_MAX_AGE || !s.map.current || (s.map.total !== undefined && s.map.tiles < s.map.total * 0.98)) out.push('map');
-  if (!s.graph || now - s.graph.at > DATA_MAX_AGE) out.push('graph');
+  if (!s.graph || now - s.graph.at > DATA_MAX_AGE || (s.graph.v ?? 1) < GRAPH_VERSION) out.push('graph');
   if (!s.places || now - s.places.at > DATA_MAX_AGE || (s.geo !== undefined && s.geo.have < s.geo.total)) out.push('places');
   if (!s.pois || now - s.pois.at > DATA_MAX_AGE) out.push('pois');
   if (!s.metro || now - s.metro.at > METRO_MAX_AGE) out.push('metro');

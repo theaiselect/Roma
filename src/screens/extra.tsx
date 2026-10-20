@@ -227,12 +227,15 @@ function Rules() {
   );
 }
 
-interface GiftEntity extends Entity { kind: 'gift'; forWhom: string; what: string; where: string; bought: boolean }
+interface GiftEntity extends Entity { kind: 'gift'; forWhom: string | null; what: string | null; where: string | null; bought: boolean; shared?: boolean }
 
-/** Lista de regalos (F37). */
+/** Lista de regalos (F37). Cada uno ve los suyos; los que se marcan «compartido» los ven los dos. */
 function Gifts() {
-  const gifts = useKind<GiftEntity>('gift') ?? [];
-  const [f, setF] = useState({ forWhom: '', what: '', where: '' });
+  const me = useSettings().profile ?? 'jesus';
+  const other = travellers[me === 'jesus' ? 'lucia' : 'jesus'].name;
+  // Los del otro que no ha compartido llegan cerrados (sin texto) y no se enseñan: pueden ser una sorpresa.
+  const gifts = (useKind<GiftEntity>('gift') ?? []).filter((g) => !g.locked && g.what !== null);
+  const [f, setF] = useState({ forWhom: '', what: '', where: '', shared: false });
   return (
     <div class="stack-lg">
       <BackTitle title="Regalos" />
@@ -240,14 +243,22 @@ function Gifts() {
         <input type="text" placeholder="Para quién" value={f.forWhom} onInput={(e) => setF({ ...f, forWhom: (e.target as HTMLInputElement).value })} aria-label="Para quién" />
         <input type="text" placeholder="Qué" value={f.what} onInput={(e) => setF({ ...f, what: (e.target as HTMLInputElement).value })} aria-label="Qué" />
         <input type="text" placeholder="Dónde comprarlo" value={f.where} onInput={(e) => setF({ ...f, where: (e.target as HTMLInputElement).value })} aria-label="Dónde" />
-        <button type="button" class="btn primary" disabled={!f.forWhom.trim() || !f.what.trim()} onClick={() => { void save({ kind: 'gift', ...f, bought: false }); setF({ forWhom: '', what: '', where: '' }); }}><Icon name="plus" /> Añadir</button>
+        <label class="row small" style={{ gap: '0.5rem' }}>
+          <input type="checkbox" checked={f.shared} onChange={(e) => setF({ ...f, shared: (e.target as HTMLInputElement).checked })} />
+          Que lo vea también {other}
+        </label>
+        <p class="small muted">{f.shared ? `${other} lo verá en su móvil.` : `Solo lo ves tú: ${other} no sabrá nada (sirve para sorpresas).`}</p>
+        <button type="button" class="btn primary" disabled={!f.forWhom.trim() || !f.what.trim()} onClick={() => { void save({ kind: 'gift', forWhom: f.forWhom.trim(), what: f.what.trim(), where: f.where.trim(), bought: false, shared: f.shared }); setF({ forWhom: '', what: '', where: '', shared: false }); }}><Icon name="plus" /> Añadir</button>
       </section>
       <ul class="list">
-        {gifts.sort((a, b) => Number(a.bought) - Number(b.bought)).map((g) => (
+        {[...gifts].sort((a, b) => Number(a.bought) - Number(b.bought)).map((g) => (
           <li key={g.id} class="card leg" style={{ alignItems: 'center' }}>
             <input type="checkbox" checked={g.bought} aria-label={`Comprado: ${g.what}`} onChange={(e) => void save({ ...g, bought: (e.target as HTMLInputElement).checked })} />
             <div class="spread">
-              <span class={g.bought ? 'strike' : undefined}><b>{g.forWhom}</b>: {g.what}{g.where && <span class="small muted"> · {g.where}</span>}</span>
+              <span class={g.bought ? 'strike' : undefined}><b>{g.forWhom}</b>: {g.what}{g.where && <span class="small muted"> · {g.where}</span>}
+                <br />{g.author !== me
+                  ? <span class="small muted">Lo apuntó {travellers[g.author].name}</span>
+                  : <button type="button" class="btn ghost small" style={{ minHeight: '36px', padding: '0 0.4rem' }} aria-pressed={!!g.shared} onClick={() => void save({ ...g, shared: !g.shared })}>{g.shared ? `Lo ve también ${other} · ocultar` : `Solo lo ves tú · compartir con ${other}`}</button>}</span>
               <button type="button" class="btn ghost" aria-label="Quitar" onClick={() => void remove(g.id)}><Icon name="trash" /></button>
             </div>
           </li>

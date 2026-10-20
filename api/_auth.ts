@@ -36,7 +36,8 @@ export function clientIp(req: Request): string {
 
 /**
  * Comprueba la cabecera x-trip-code. Devuelve null si es válida, o la respuesta de error.
- * Con almacén: tras 10 fallos en un minuto, bloquea esa IP 15 minutos.
+ * Con almacén: tras 30 fallos en un minuto, bloquea esa IP 5 minutos. Margen amplio porque los dos móviles
+ * comparten IP en el wifi del hotel: un par de contraseñas mal escritas no deben dejar fuera al otro.
  */
 export async function checkTripCode(req: Request, store?: Store | null): Promise<Response | null> {
   const expected = expectedHash();
@@ -47,7 +48,7 @@ export async function checkTripCode(req: Request, store?: Store | null): Promise
   const got = code ? Buffer.from(hashTripCode(code), 'hex') : Buffer.alloc(0);
   const want = Buffer.from(expected, 'hex');
   if (got.length !== want.length || !timingSafeEqual(got, want)) {
-    if (store && (await store.failHit(ip)) > 10) await store.block(ip, 15 * 60);
+    if (store && (await store.failHit(ip)) > 30) await store.block(ip, 5 * 60);
     return json(401, { error: 'unauthorized' });
   }
   return null;

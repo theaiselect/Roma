@@ -47,10 +47,11 @@ with sync_playwright() as p:
     pan.get_by_role('button',name='entrada.png',exact=True).click(); j.wait_for_timeout(600)
     check('visor: se abre la entrada a pantalla completa', j.get_by_role('dialog').count()==1 and j.locator('.ticketview-img').count()==1)
     check('visor: indica la posición «de 2»', j.get_by_text(re.compile('[12] de 2')).count()>=1)
-    if not j.locator('.ticketview-pdf').count():
+    if 'entrada.pdf' not in j.locator('.ticketview-bar').first.inner_text():
         nav=j.get_by_role('button',name=re.compile('Siguiente'))
-        (nav if nav.is_enabled() else j.get_by_role('button',name=re.compile('Anterior'))).click(); j.wait_for_timeout(500)
-    check('visor: pasar a la otra entrada enseña el PDF', j.locator('.ticketview-pdf').count()==1)
+        (nav if nav.is_enabled() else j.get_by_role('button',name=re.compile('Anterior'))).click(); j.wait_for_timeout(2500)
+    # El PDF se enseña como imagen de sus páginas (pdf.js); si no se pudiera, con el visor del navegador.
+    check('visor: pasar a la otra entrada enseña el PDF', 'entrada.pdf' in j.locator('.ticketview-bar').first.inner_text() and (j.locator('.ticketview-img').count()>=1 or j.locator('.ticketview-pdf').count()==1))
     j.get_by_role('button',name=re.compile('Cerrar')).click(); j.wait_for_timeout(200)
     check('visor: se cierra', j.get_by_role('dialog').count()==0)
     sync(j); go(l,'/mas/reservas'); sync(l); l.wait_for_timeout(800)

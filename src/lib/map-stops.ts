@@ -32,10 +32,13 @@ export interface BuildOptions {
   nextId?: string | null;
 }
 
+export const DONE_AFTER_MS = 45 * 60_000;
+
 function visitStatus(s: TimedStop, o: BuildOptions): StopStatus {
   if (o.currentId === s.id) return 'now';
   if (o.nextId === s.id) return 'next';
-  if (o.done.has(s.id) || (s.at !== null && s.at < o.now)) return 'done';
+  // Igual que en el resto de la app: una parada se da por hecha 45 min después de su hora (o al marcarla).
+  if (o.done.has(s.id) || (s.at !== null && s.at + DONE_AFTER_MS < o.now)) return 'done';
   return 'todo';
 }
 

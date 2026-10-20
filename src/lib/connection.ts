@@ -41,7 +41,7 @@ export async function checkConnection({ tripCode, profile, online, fetchFn = fet
     const res = await fetchFn(`/api/sync?since=${Date.now()}`, { cache: 'no-store', headers: { 'x-trip-code': tripCode, 'x-who': profile ?? '' } });
     if (res.ok) steps.push({ ok: true, text: 'El código es correcto y la sincronización funciona.' });
     else if (res.status === 401) steps.push({ ok: false, text: 'El código no coincide con el del servidor. Es nuestra fecha (dd/mm/aaaa), con o sin barras; revísala con «Mostrar el código».' });
-    else if (res.status === 429) steps.push({ ok: false, text: 'Demasiados intentos con un código equivocado: espera unos 15 minutos.' });
+    else if (res.status === 429) steps.push({ ok: false, text: 'Demasiados intentos con un código equivocado: espera unos 5 minutos.' });
     else if (res.status === 501 || res.status === 503) steps.push({ ok: false, text: 'El servidor aún no está configurado del todo (mira los puntos de arriba).' });
     else steps.push({ ok: false, text: `El servidor contestó con un error (${res.status}). Prueba más tarde.` });
   } catch {

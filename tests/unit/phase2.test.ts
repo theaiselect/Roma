@@ -181,3 +181,22 @@ describe('saldar la deuda (money.ts)', async () => {
     expect(balance([gasto, saldo])).toMatchObject({ debtor: null, amountCents: 0, totalCents: 5000 });
   });
 });
+
+describe('calendario .ics: avisos y duraciones', () => {
+  const ics = buildIcs(undefined, Date.UTC(2026, 9, 19));
+  const event = (id: string) => ics.split('BEGIN:VEVENT').find((e) => e.includes(`UID:${id}@`))!;
+  it('avisa 30 min antes de los trayectos y de lo que tiene entrada o reserva', () => {
+    expect(event('d1-flight')).toContain('TRIGGER:-PT30M');
+    expect(event('d2-colosseo')).toContain('TRIGGER:-PT30M');
+    expect(event('d2-felice')).toContain('TRIGGER:-PT30M');
+  });
+  it('no avisa de cada parada ni despierta 30 min antes de la alarma', () => {
+    expect(event('d2-marcello')).not.toContain('VALARM');
+    expect(event('d5-alarm')).toContain('TRIGGER:-PT0M');
+    expect((ics.match(/BEGIN:VALARM/g) ?? []).length).toBeLessThan(25);
+  });
+  it('usa la hora de llegada real del bus y del vuelo', () => {
+    expect(event('d1-bus')).toContain('DTEND:20261030T063500Z'); // 07:35 en Roma
+    expect(event('d1-flight')).toContain('DTEND:20261030T113500Z'); // 12:35 en Roma
+  });
+});

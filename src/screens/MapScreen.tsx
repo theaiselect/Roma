@@ -5,7 +5,7 @@ import { Icon } from '@/components/Icon';
 import { PlaceFacts } from '@/components/StopCard';
 import { StopSheet, whenText } from '@/components/StopSheet';
 import { placeById, places } from '@/data/places';
-import { days } from '@/data/trip';
+import { days, travellers } from '@/data/trip';
 import type { DayNum, Place } from '@/data/types';
 import { useNow } from '@/lib/clock';
 import { useChecks } from '@/lib/checks';
@@ -185,6 +185,7 @@ export function MapScreen() {
   const [pois, setPois] = useState<Poi[]>([]);
   const [poiAge, setPoiAge] = useState<number | null>(null);
   const [hotel, setHotel] = useState<LatLng | null>(null);
+  const searchSeq = useRef(0);
   const [extra, setExtra] = useState<Record<string, LatLng>>({});
   const [heading, setHeading] = useState<number | null>(null);
   const [navigating, setNavigating] = useState(false);
@@ -410,11 +411,14 @@ export function MapScreen() {
     setQ(text);
     window.clearTimeout(typing.current);
     const local = localMatches(text, saved);
-    if (text.trim().length < 2) { setResults(null); return; }
+    if (text.trim().length < 2) { searchSeq.current++; setResults(null); return; }
     setResults(local);
+    const seq = ++searchSeq.current;
     if (text.trim().length < 3) return;
     typing.current = window.setTimeout(async () => {
       const far = await searchPlaces(text);
+      // Si mientras tanto se ha escrito otra cosa, esta respuesta ya no vale (no pisa la última).
+      if (seq !== searchSeq.current) return;
       const extra = (far ?? []).filter((f) => !local.some((l) => distanceM(l, f) < 40));
       setResults([...local, ...extra]);
     }, 280);
@@ -584,11 +588,12 @@ export function MapScreen() {
 /** Los sitios con ⭐ de los dos, ordenados por cercanía. Se ven también sin conexión. */
 function SavedList({ saved, from, onShow }: { saved: SavedEntity[]; from: LatLng; onShow: (s: SavedEntity) => void }) {
   const who = useSettings().profile ?? 'jesus';
+  const otherName = travellers[who === 'jesus' ? 'lucia' : 'jesus'].name;
   const items = useMemo(() => saved.map((s) => ({ s, d: distanceM(from, s) * 1.3 })).sort((a, b) => a.d - b.d), [saved, from.lat, from.lng]);
   return (
     <section class="stack" aria-labelledby="saved-title">
       <h2 id="saved-title">Guardados ★</h2>
-      {items.length === 0 && <p class="small muted">Toca <b>☆ Guardar</b> en una parada o en cualquier sitio del mapa y quedará aquí para los dos. Lucía lo verá también.</p>}
+      {items.length === 0 && <p class="small muted">Toca <b>☆ Guardar</b> en una parada o en cualquier sitio del mapa y quedará aquí para los dos. {otherName} lo verá también.</p>}
       {items.map(({ s, d }) => (
         <article key={s.id} class="card stack" style={{ gap: '0.3rem' }}>
           <div class="spread"><b>★ {s.name}</b><span class="chip num">{formatDistance(d)}</span></div>

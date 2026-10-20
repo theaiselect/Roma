@@ -142,7 +142,8 @@ function InstallStep({ onNext }: { onNext: () => void }) {
       <h2>Ponla en la pantalla de inicio</h2>
       {ios ? (
         <ol class="stack" style={{ paddingLeft: '1.2rem', margin: 0 }}>
-          <li>Pulsa <b>Compartir</b> (el cuadrado con la flecha) en Safari.</li>
+          <li>Tiene que ser en <b>Safari</b>. Si lo has abierto desde WhatsApp u otra app, toca el icono de Safari (la brújula) o <b>···</b> → <b>Abrir en Safari</b>, y sigue allí.</li>
+          <li>Pulsa <b>Compartir</b> (el cuadrado con la flecha).</li>
           <li>Elige <b>Añadir a pantalla de inicio</b> y luego <b>Añadir</b>.</li>
           <li>Abre <b>Roma</b> siempre desde ese icono. La primera vez te pedirá la contraseña otra vez: Safari y la app instalada no comparten datos.</li>
         </ol>

@@ -37,7 +37,7 @@
   --terracotta: #8A5A0A;
   --oro: #D9A441;
   --on-oro: #1B130F;
-  --ocra: #B27A12;
+  --ocra: #875C06;
   --rosa-romano: #D98F8A;
   --marmol: #F7F1E8;
   --nav: #FFFDF8;
@@ -61,7 +61,7 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
     --terracotta: #8A5A0A;
-    --ocra: #B27A12;
+    --ocra: #875C06;
     --rosa-romano: #D98F8A;
     --marmol: #F7F1E8;
     --nav: #FFFDF8;

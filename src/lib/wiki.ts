@@ -6,34 +6,34 @@ import { places } from '@/data/places';
 
 /** Palabras del título del artículo (sin tildes, en minúsculas) que identifican cada sitio. */
 export const WIKI_HINT: Record<string, RegExp> = {
-  'villa-borghese': /villa borghese/,
+  'villa-borghese': /^villa borghese/,
   'piazza-popolo': /plaza del popolo|piazza del popolo/,
-  'piazza-spagna': /plaza de espana|piazza di spagna/,
-  'trevi': /trevi/,
-  'colosseo': /coliseo|anfiteatro flavio|colosseo/,
-  'palatino': /palatino/,
-  'foro-romano': /foro romano/,
-  'ghetto': /gueto|ghetto/,
-  'teatro-marcello': /marcelo|marcello/,
+  'piazza-spagna': /plaza de espana|piazza di spagna|escalinata de la trinidad/,
+  'trevi': /fontana de trevi|fontana di trevi/,
+  'colosseo': /^coliseo( de roma)?$|anfiteatro flavio/,
+  'palatino': /^(monte )?palatino$|colina palatina/,
+  'foro-romano': /^foro romano/,
+  'ghetto': /gueto (judio )?de roma|ghetto (ebraico )?di roma/,
+  'teatro-marcello': /teatro de marcelo|teatro di marcello/,
   'bocca-verita': /boca de la verdad|bocca della verita/,
   'circo-massimo': /circo maximo|circo massimo/,
   'aventino': /aventino/,
   'palazzo-barberini': /palacio barberini|palazzo barberini/,
-  'castel-santangelo': /sant'?angelo|mausoleo de adriano/,
-  'gianicolo': /janiculo|gianicolo|acqua paola|acua paola/,
+  'castel-santangelo': /castillo de sant'?angelo|castel sant'?angelo|mausoleo de adriano/,
+  'gianicolo': /janiculo|gianicolo/,
   'tempietto': /tempietto|san pietro in montorio/,
-  'trastevere': /trastevere/,
+  'trastevere': /^trastevere/,
   'musei-vaticani': /museos vaticanos|capilla sixtina/,
   'san-pietro': /basilica de san pedro|basilica di san pietro/,
   'cupola': /basilica de san pedro|basilica di san pietro/,
-  'navona': /navona/,
-  'pantheon': /panteon/,
-  'vittoriano': /victor manuel|vittoriano|altar de la patria/,
-  'campidoglio': /capitolio|campidoglio|capitolina/,
-  'termini': /termini/,
-  'musei-capitolini': /capitolinos|capitoline/,
+  'navona': /plaza navona|piazza navona/,
+  'pantheon': /^panteon( de agripa| de roma| \(roma\))?$/,
+  'vittoriano': /monumento a victor manuel|vittoriano|altar de la patria/,
+  'campidoglio': /plaza del (campidoglio|capitolio)|piazza del campidoglio|^capitolio|monte capitolino/,
+  'termini': /estacion de roma termini|roma termini/,
+  'musei-capitolini': /museos capitolinos/,
   'san-luigi': /luigi dei francesi|san luis de los franceses/,
-  'sant-ignazio': /ignazio|ignacio de roma/,
+  'sant-ignazio': /iglesia de san ignacio|sant'?ignazio/,
   'san-pietro-vincoli': /vincoli|vinculos/,
 };
 
@@ -60,7 +60,8 @@ async function getJson<T>(url: string, ms = 9000): Promise<T | null> {
   try { const r = await fetch(url, { signal: ctl.signal }); return r.ok ? ((await r.json()) as T) : null; } catch { return null; } finally { window.clearTimeout(t); }
 }
 
-const KEY = (id: string) => `wiki:${id}`;
+// «wiki2»: pistas afinadas (antes algún sitio salía con el artículo de al lado): se vuelven a buscar.
+const KEY = (id: string) => `wiki2:${id}`;
 const MAX_AGE = 60 * 86_400_000;
 const MISS_AGE = 14 * 86_400_000;
 

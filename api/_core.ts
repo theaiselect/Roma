@@ -72,8 +72,12 @@ function topicDate(topic: unknown): string | null {
  * - Cartas y cápsula: sin texto hasta `unlockAt`.
  * - Votos y respuestas del otro: ocultos hasta que `who` también haya votado/respondido,
  *   o hasta la medianoche del día siguiente en Roma.
+ * - Regalos: solo los ve quien los apunta, salvo que los marque como compartidos (sorpresas).
  */
 export function viewFor(e: ServerEntity, who: string | null, now: number, all: { votes: ServerEntity[]; answers: ServerEntity[] }): ServerEntity {
+  if (e.kind === 'gift' && !e.deleted && e.shared !== true && e.author !== who) {
+    return { ...e, forWhom: null, what: null, where: null, locked: true };
+  }
   if ((e.kind === 'letter' || e.kind === 'capsule') && !e.deleted) {
     const at = typeof e.unlockAt === 'string' ? romeInstant(e.unlockAt) : 0;
     if (now < at) return { ...e, text: null, locked: true };

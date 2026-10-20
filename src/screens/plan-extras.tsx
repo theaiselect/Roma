@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { meetingPoints, meetingRule, rainPlans } from '@/data/alternatives';
 import type { DayNum } from '@/data/types';
-import { rainDays, setShared, useSharedState } from '@/lib/plan-state';
+import { meetingKey, rainDays, setShared, useSharedState } from '@/lib/plan-state';
 import { DinnerVote } from '@/screens/us-votes';
 import { RainSuggestion } from '@/screens/today-extras';
 
@@ -10,7 +10,8 @@ export function PlanExtras({ day }: { day: DayNum }) {
   const state = useSharedState();
   const rain = rainDays(state).has(day);
   const hasRainPlan = rainPlans.some((p) => p.day === day);
-  const custom = state.get('meeting')?.value as string | undefined;
+  // Un punto de encuentro por día: cambiar el del sábado no toca el del domingo.
+  const custom = state.get(meetingKey(day))?.value as string | undefined;
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(custom ?? '');
 
@@ -36,7 +37,7 @@ export function PlanExtras({ day }: { day: DayNum }) {
         {editing && (
           <div class="row">
             <input type="text" value={text} placeholder="Ej.: la fuente de la plaza" onInput={(e) => setText((e.target as HTMLInputElement).value)} aria-label="Nuevo punto de encuentro" style={{ flex: 1 }} />
-            <button type="button" class="btn primary" onClick={() => { void setShared('meeting', text.trim() || null); setEditing(false); }}>Fijar</button>
+            <button type="button" class="btn primary" onClick={() => { void setShared(meetingKey(day), text.trim() || null); setEditing(false); }}>Fijar</button>
           </div>
         )}
         <p class="small muted">{meetingRule}</p>

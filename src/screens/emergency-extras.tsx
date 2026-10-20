@@ -4,6 +4,8 @@ import { ShowCard } from '@/components/ShowCard';
 import { hotel } from '@/data/emergency';
 import { useLocal } from '@/lib/local';
 import { usePrivate } from '@/lib/private';
+import { travellers } from '@/data/trip';
+import { useSettings } from '@/lib/settings';
 
 /** Dirección del hotel para enseñar a un taxista, copiar o abrir en el mapa. */
 export function HotelCard() {
@@ -45,6 +47,8 @@ const FIELDS: { key: keyof MyCard; label: string; placeholder: string }[] = [
 /** Ficha personal para una urgencia. Solo se guarda en este móvil: no se sincroniza ni se manda al servidor. */
 export function MyCardSection() {
   const [card, setCard] = useLocal<MyCard>(CARD_KEY, EMPTY_CARD);
+  const me = useSettings().profile ?? 'jesus';
+  const other = travellers[me === 'jesus' ? 'lucia' : 'jesus'].name;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<MyCard>(card);
   const filled = FIELDS.filter((f) => card[f.key].trim());
@@ -53,7 +57,7 @@ export function MyCardSection() {
       <div class="spread"><h2>Mi ficha</h2>
         <button type="button" class="btn ghost" onClick={() => { setDraft(card); setEditing(!editing); }}>{editing ? 'Cerrar' : filled.length ? 'Editar' : 'Rellenar'}</button>
       </div>
-      <p class="small muted">Se guarda solo en este móvil (nadie más la ve, ni siquiera Lucía). Sirve para enseñarla a un médico.</p>
+      <p class="small muted">Se guarda solo en este móvil (nadie más la ve, ni siquiera {other}; va en la copia de seguridad). Sirve para enseñarla a un médico.</p>
       {!editing && filled.length === 0 && <p class="small">Aún está vacía.</p>}
       {!editing && filled.length > 0 && (
         <dl class="stack" style={{ gap: '0.4rem', margin: 0 }}>

@@ -3,6 +3,8 @@ import { Icon } from '@/components/Icon';
 import { offlineStatus, STAGE_LABEL, type OfflineStatus, type Stage } from '@/lib/offline-data';
 import { runAuto, useAutoOffline } from '@/lib/auto-offline';
 import { estimateMB } from '@/lib/offline-map';
+import { travellers } from '@/data/trip';
+import { useSettings } from '@/lib/settings';
 
 function useOnline(): boolean {
   const [on, setOn] = useState(navigator.onLine);
@@ -39,6 +41,8 @@ export function OfflineCard() {
   const cur = auto.phase === 'running' ? { stage: auto.stage ?? 'map', done: auto.done, total: auto.total } : null;
   const failed = auto.phase === 'error' ? auto.failed : [];
   const online = useOnline();
+  const me = useSettings().profile ?? 'jesus';
+  const other = travellers[me === 'jesus' ? 'lucia' : 'jesus'].name;
   const refresh = () => offlineStatus().then(setSt).catch(() => undefined);
   useEffect(() => { void refresh(); }, [auto.phase]);
   const go = () => void runAuto(true);
@@ -68,7 +72,7 @@ export function OfflineCard() {
         <Icon name="map" /> {cur ? 'Descargando…' : all ? 'Actualizar todo' : 'Descargar ahora'}
       </button>
       {!online && <p class="small muted">Sin conexión ahora mismo.</p>}
-      <p class="small muted">Sincronizar con Lucía y abrir cartas o la cápsula del tiempo sí necesitan conexión: el servidor guarda cada sorpresa hasta su hora.</p>
+      <p class="small muted">Sincronizar con {other} y abrir cartas o la cápsula del tiempo sí necesitan conexión: el servidor guarda cada sorpresa hasta su hora.</p>
     </section>
   );
 }

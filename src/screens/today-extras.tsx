@@ -9,7 +9,7 @@ import { openTicket, type TicketEntity } from '@/screens/Reservations';
 import { setCheck, useChecks } from '@/lib/checks';
 import { useKind, type Entity } from '@/lib/db';
 import { lastMetroWarning } from '@/lib/metro';
-import { rainDays, setShared, useSharedState, useTimeline } from '@/lib/plan-state';
+import { meetingKey, rainDays, setShared, useSharedState, useTimeline } from '@/lib/plan-state';
 import { useLocal } from '@/lib/local';
 import { backupReminder } from '@/lib/backup-reminder';
 import { useChecks as useReservationStatus } from '@/lib/checks';
@@ -133,15 +133,19 @@ export function RainSuggestion({ day, active }: { day: DayNum; active: boolean }
 function RainAndMeeting({ day }: { day: DayNum }) {
   const state = useSharedState();
   const rain = rainDays(state).has(day);
-  const custom = state.get('meeting')?.value as string | undefined;
+  const custom = state.get(meetingKey(day))?.value as string | undefined;
+  // El botón «¿Llueve?» solo los días que tienen plan de lluvia (el día de la vuelta no tiene).
+  const hasPlan = rainPlans.some((p) => p.day === day);
   return (
     <section class="card stack" style={{ gap: '0.5rem' }}>
       <RainSuggestion day={day} active={rain} />
-      <div class="spread">
-        <div><b>{rain ? '☔ Plan de lluvia activado' : '¿Llueve?'}</b><p class="small muted">{rain ? 'La tarde cambia a sitios bajo techo en los dos móviles.' : 'Cambia la tarde por sitios bajo techo.'}</p></div>
-        <button type="button" class={`btn${rain ? '' : ' primary'}`} onClick={() => void setShared(`rain:${day}`, !rain)}>{rain ? 'Deshacer' : 'Llueve'}</button>
-      </div>
-      <div class="frieze" aria-hidden="true" />
+      {hasPlan && (<>
+        <div class="spread">
+          <div><b>{rain ? '☔ Plan de lluvia activado' : '¿Llueve?'}</b><p class="small muted">{rain ? 'La tarde cambia a sitios bajo techo en los dos móviles.' : 'Cambia la tarde por sitios bajo techo.'}</p></div>
+          <button type="button" class={`btn${rain ? '' : ' primary'}`} onClick={() => void setShared(`rain:${day}`, !rain)}>{rain ? 'Deshacer' : 'Llueve'}</button>
+        </div>
+        <div class="frieze" aria-hidden="true" />
+      </>)}
       <p class="small"><b>Punto de encuentro:</b> {custom || meetingPoints[day].place}</p>
       <p class="small muted">{meetingRule}</p>
     </section>

@@ -23,7 +23,7 @@ const WALK_MS = 1.3; // 4,7 km/h
 
 function classOf(hw: string): number {
   if (hw === 'steps') return 1;
-  if (hw === 'primary' || hw === 'secondary' || hw === 'primary_link' || hw === 'secondary_link') return 2;
+  if (hw === 'trunk' || hw === 'trunk_link' || hw === 'primary' || hw === 'secondary' || hw === 'primary_link' || hw === 'secondary_link') return 2;
   if (hw === 'service' || hw === 'track') return 3;
   return 0;
 }

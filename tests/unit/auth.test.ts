@@ -25,10 +25,12 @@ describe('código del viaje', () => {
     expect((await checkTripCode(req('nope')))?.status).toBe(401);
   });
 
-  it('tras 10 fallos en un minuto bloquea la IP', async () => {
+  it('tras 30 fallos en un minuto bloquea la IP (y no antes: los dos móviles comparten wifi)', async () => {
     process.env.TRIP_CODE = 'gelato-trevi-luna';
     const store = new MemoryStore();
-    for (let i = 0; i < 11; i++) await checkTripCode(req('mal', '9.9.9.9'), store);
+    for (let i = 0; i < 10; i++) await checkTripCode(req('mal', '9.9.9.9'), store);
+    expect(await checkTripCode(req('gelato-trevi-luna', '9.9.9.9'), store)).toBeNull();
+    for (let i = 0; i < 21; i++) await checkTripCode(req('mal', '9.9.9.9'), store);
     expect((await checkTripCode(req('gelato-trevi-luna', '9.9.9.9'), store))?.status).toBe(429);
     expect(await checkTripCode(req('gelato-trevi-luna', '8.8.8.8'), store)).toBeNull();
   });

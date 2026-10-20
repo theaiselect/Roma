@@ -28,6 +28,9 @@ export function VoiceRecorder({ onSaved }: { onSaved: (blobId: string) => void }
     return () => window.clearInterval(id);
   }, [state]);
 
+  // Si se sale de la pantalla grabando: se para el micrófono y se guarda lo grabado hasta ese momento.
+  useEffect(() => () => { if (rec.current?.state === 'recording') rec.current.stop(); }, []);
+
   if (typeof MediaRecorder === 'undefined') return null;
 
   const start = async () => {

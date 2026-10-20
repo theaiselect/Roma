@@ -169,3 +169,14 @@ describe('fotos de los sitios (Wikipedia)', () => {
     expect(articleUrl('Plaza de España (Roma)')).toBe('https://es.wikipedia.org/wiki/Plaza_de_Espa%C3%B1a_(Roma)');
   });
 });
+
+describe('pistas de Wikipedia afinadas', () => {
+  it('no confunde un sitio con el artículo de al lado', () => {
+    expect(WIKI_HINT.campidoglio!.test(fold('Loba capitolina'))).toBe(false);
+    expect(WIKI_HINT.campidoglio!.test(fold('Plaza del Campidoglio'))).toBe(true);
+    expect(WIKI_HINT.trevi!.test(fold('Trevi (rione)'))).toBe(false);
+    expect(WIKI_HINT.trevi!.test(fold('Fontana de Trevi'))).toBe(true);
+    expect(WIKI_HINT.colosseo!.test(fold('Colosseo (metro de Roma)'))).toBe(false);
+    expect(WIKI_HINT.termini!.test(fold('Termini (Sicilia)'))).toBe(false);
+  });
+});

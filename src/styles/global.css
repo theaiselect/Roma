@@ -179,7 +179,7 @@ input[type='text'], input[type='search'], input[type='password'], input[type='nu
 .update { position: fixed; left: 1rem; right: 1rem; bottom: calc(4.6rem + env(safe-area-inset-bottom)); z-index: 35; background: var(--tarjeta-2); border: 1px solid var(--linea-fuerte); color: var(--tinta); box-shadow: var(--sombra); border-radius: var(--radius); padding: 0.6rem 0.75rem 0.6rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .update .btn { min-height: 40px; }
 
-.sim { background: var(--ocra); color: #2B2522; text-align: center; font-size: 0.8rem; font-weight: 700; padding: 0.2rem; }
+.sim { background: var(--oro); color: var(--on-oro); text-align: center; font-size: 0.8rem; font-weight: 700; padding: 0.2rem; }
 .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 .dot.green { background: var(--pino); } .dot.ocre { background: var(--ocra); } .dot.grey { background: #9A918A; }
 .syncbtn { display: inline-flex; align-items: center; gap: 0.4rem; min-height: var(--tap); min-width: var(--tap); justify-content: center; border: 0; background: none; color: var(--tinta-suave); font: inherit; font-size: 0.8rem; font-weight: 700; }
@@ -370,3 +370,10 @@ a { text-underline-offset: 0.18em; }
 .ticketview-pages { display: grid; gap: 0.75rem; width: 100%; height: 100%; place-items: center; }
 .ticketview-pages:has(> :nth-child(2)) { height: auto; align-self: start; }
 .ticketview-pages:has(> :nth-child(2)) .ticketview-img { width: 100%; max-height: none; }
+
+/* iPhone con la app instalada: la barra de estado (hora, batería) va en blanco sobre la app. En el tema
+   claro se pone una franja oscura debajo para que se lea. En Android y en el navegador mide 0 y no se ve. */
+:root[data-theme='light'] body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: #2B1F1A; z-index: 100; pointer-events: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: #2B1F1A; z-index: 100; pointer-events: none; }
+}

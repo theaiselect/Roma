@@ -22,7 +22,9 @@ import { PlanExtras } from '@/screens/plan-extras';
 function TravelMode({ day, now, tl }: { day: DayNum; now: number; tl: TimedStop[] }) {
   const checks = useChecks('legs');
   const legs = tl.filter((s) => s.day === day && s.leg);
-  const done = new Set([...checks.values()].filter((c) => c.done).map((c) => c.itemId));
+  // Solo las casillas de los tramos de ESTE día (las del viernes no cuentan el martes).
+  const ids = new Set(legs.map((l) => l.id));
+  const done = new Set([...checks.values()].filter((c) => c.done && ids.has(c.itemId)).map((c) => c.itemId));
   const views = legViews(legs, done, now);
   return (
     <section class="card stack" aria-labelledby="travel-title">

@@ -1,11 +1,14 @@
 // Páginas de un PDF como imágenes (pdf.js, dentro de la app y sin conexión). Así una entrada en PDF se ve
 // igual en Android y en iPhone, a pantalla completa y con el QR nítido, sin depender del visor del móvil.
 
-let lib: Promise<typeof import('pdfjs-dist')> | null = null;
+// Versión «legacy» de pdf.js: trae los añadidos que necesitan los navegadores que no son de última hora
+// (la normal usa funciones de JavaScript de 2026 que Safari y Chrome de los móviles aún no tienen).
+type PdfJs = typeof import('pdfjs-dist/legacy/build/pdf.mjs');
+let lib: Promise<PdfJs> | null = null;
 
-async function pdfjs(): Promise<typeof import('pdfjs-dist')> {
+async function pdfjs(): Promise<PdfJs> {
   lib ??= (async () => {
-    const [m, worker] = await Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]);
+    const [m, worker] = await Promise.all([import('pdfjs-dist/legacy/build/pdf.mjs'), import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')]);
     m.GlobalWorkerOptions.workerSrc = worker.default;
     return m;
   })();

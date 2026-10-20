@@ -47,7 +47,8 @@ export async function speakSpanish(text: string, onEnd?: () => void): Promise<bo
   const u = new SpeechSynthesisUtterance(text);
   if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'es-ES';
   u.rate = 1;
-  if (onEnd) u.onend = onEnd;
+  // Al cortarla otra voz (otra audioguía, una frase, la navegación) el navegador da «error», no «end».
+  if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
   speechSynthesis.speak(u);
   return true;
 }

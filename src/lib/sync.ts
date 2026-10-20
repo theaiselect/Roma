@@ -83,6 +83,8 @@ async function prefetchTickets(): Promise<void> {
 // ── Cartas, cápsula, votos y respuestas que llegaron cerrados ───
 function canUnlock(e: Entity, mine: Entity[], now: number): boolean {
   if (e.kind === 'letter' || e.kind === 'capsule') return typeof e.unlockAt === 'string' && now >= romeInstantClient(e.unlockAt);
+  // Regalos sin compartir: se abren solos cuando quien los apuntó los comparte (llega como cambio normal).
+  if (e.kind !== 'vote' && e.kind !== 'answer') return false;
   const key = e.kind === 'vote' ? 'topic' : 'questionId';
   if (mine.some((m) => m.kind === e.kind && m[key] === e[key])) return true;
   const date = /(\d{4}-\d{2}-\d{2})$/.exec(String(e[key] ?? ''))?.[1];

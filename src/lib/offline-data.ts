@@ -47,11 +47,13 @@ export function parseWays(r: { elements?: WayEl[] } | null): RawWay[] {
     ? [{ hw: e.tags.highway, name: e.tags.name, pts: e.geometry.map((g) => [g.lat, g.lon] as [number, number]) }] : []));
 }
 
-export const wayQuery = (b: Bbox) => `[out:json][timeout:90];way["highway"]["highway"!~"^(motorway|motorway_link|trunk|trunk_link|proposed|construction|raceway|bus_guideway|corridor|elevator|platform|bridleway)$"]["foot"!~"^(no|private)$"]["access"!~"^(private|no)$"]["indoor"!="yes"](${b.south},${b.west},${b.north},${b.east});out tags geom qt;`;
+export const wayQuery = (b: Bbox) => `[out:json][timeout:90];way["highway"]["highway"!~"^(motorway|motorway_link|proposed|construction|raceway|bus_guideway|corridor|elevator|platform|bridleway)$"]["foot"!~"^(no|private)$"]["access"!~"^(private|no)$"]["indoor"!="yes"](${b.south},${b.west},${b.north},${b.east});out tags geom qt;`;
 
 const GRAPH_KEY = 'offline-graph';
 const GRAPH_INFO = 'offline-graph-info';
-export interface GraphInfo { at: number; nodes: number; streets: number }
+/** v2: incluye las avenidas grandes («trunk», con acera en Roma) para no dar rodeos sin conexión. */
+export const GRAPH_VERSION = 2;
+export interface GraphInfo { at: number; nodes: number; streets: number; v?: number }
 
 let graphMem: Graph | null | undefined;
 
@@ -75,7 +77,7 @@ export async function downloadGraph(onProgress: (done: number, total: number) =>
   const g = buildGraph(ways);
   if (g.n < 1000) throw new Error('Pocas calles descargadas');
   await setMeta(GRAPH_KEY, toStored(g));
-  const info = { at: Date.now(), nodes: g.n, streets: g.names.length };
+  const info: GraphInfo = { at: Date.now(), nodes: g.n, streets: g.names.length, v: GRAPH_VERSION };
   await setMeta(GRAPH_INFO, info);
   graphMem = g;
   placeIdxMem = undefined;

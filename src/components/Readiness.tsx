@@ -29,9 +29,11 @@ export function useReadiness(server: ReadyInput['server'] = null): Check[] {
     return () => { for (const e of [DB_EVENT, 'roma-sync-change', 'online']) window.removeEventListener(e, on); };
   }, []);
 
+  // Se recalcula al cambiar datos o al acabar una descarga, con un pequeño retraso para agrupar cambios
+  // seguidos (no en cada tesela que se descarga: eso gastaba batería).
   useEffect(() => {
     let alive = true;
-    void (async () => {
+    const t = window.setTimeout(() => void (async () => {
       const [st, pending, sw, persisted, last] = await Promise.all([
         offlineStatus().catch(() => null),
         outboxSize().catch(() => 0),
@@ -49,9 +51,9 @@ export function useReadiness(server: ReadyInput['server'] = null): Check[] {
         lastSyncAt: last ?? syncInfo().lastSyncAt,
         missing: st ? stagesNeeded(st, Date.now()) : [],
       });
-    })();
-    return () => { alive = false; };
-  }, [tick, auto.phase, auto.done]);
+    })(), 400);
+    return () => { alive = false; window.clearTimeout(t); };
+  }, [tick, auto.phase]);
 
   if (!local) return [];
   return readinessChecks({

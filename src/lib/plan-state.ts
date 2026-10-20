@@ -16,6 +16,9 @@ export function setShared(key: string, value: unknown): Promise<Entity> {
   return save({ id: `state:${key}`, kind: 'state', key, value });
 }
 
+/** Clave del punto de encuentro de cada día en el estado compartido. */
+export const meetingKey = (day: DayNum): string => `meeting:${day}`;
+
 export function rainDays(state: Map<string, StateEntity>): Set<DayNum> {
   const out = new Set<DayNum>();
   for (const [k, v] of state) if (k.startsWith('rain:') && v.value === true) out.add(Number(k.slice(5)) as DayNum);
