@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { ElevationChart, MetroNear, StarButton } from '@/components/MapExtras';
 import { RomaMap, type MapPin } from '@/components/RomaMap';
 import { Icon } from '@/components/Icon';
 import { PlaceFacts } from '@/components/StopCard';
@@ -18,9 +19,15 @@ import { ARRIVED_M, advance, bearing, distanceToStep, isOffRoute, remainingM, sp
 import { canSpeak, keepAwake, speak, stopSpeaking } from '@/lib/speech';
 import { directionsUrl, isIOS } from '@/lib/maps';
 import { useTimeline } from '@/lib/plan-state';
+import { useSettings } from '@/lib/settings';
 import { romeParts } from '@/lib/time';
 import { OfflineCard } from '@/components/OfflineCard';
-import { cachedPois, footRoute, footRouteVia, formatDuration, geocodeCached, nearest, refreshPois, reverseGeocode, searchPlaces, type Found, type Poi, type PoiKind, type Route } from '@/lib/osm';
+import { cachedPois, footRoute, footRouteVia, footRoutes, formatDuration, geocodeCached, nearest, refreshPois, reverseGeocode, searchPlaces, type Found, type Poi, type PoiKind, type Route } from '@/lib/osm';
+import { useLocal } from '@/lib/local';
+import { downloadMetro, useMetro } from '@/lib/metro-map';
+import { overpass } from '@/lib/offline-data';
+import { elevationProfile, type Profile } from '@/lib/relief';
+import { toggleSaved, useSaved, type SavedEntity } from '@/lib/saved';
 
 const DAY_COLOR: Record<DayNum, string> = { 1: 'var(--terracotta)', 2: 'var(--ocra)', 3: 'var(--pino)', 4: 'var(--vino)', 5: 'var(--tinta-suave)' };
 // Los mapas no entienden variables CSS: mismos colores en hexadecimal.
@@ -114,11 +121,26 @@ function useOnline(): boolean {
 
 const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 /** Sitios del plan que coinciden con lo escrito. Funcionan sin conexión. */
-function localMatches(q: string): Found[] {
+function localMatches(q: string, saved: SavedEntity[] = []): Found[] {
   const n = norm(q.trim());
   if (n.length < 2) return [];
-  return places.filter((p) => p.lat !== undefined && p.lng !== undefined && norm(p.name).includes(n)).slice(0, 4)
+  const stars = saved.filter((s) => norm(s.name).includes(n)).slice(0, 3).map((s) => ({ id: `saved:${s.id}`, name: s.name, detail: '★ Guardado', lat: s.lat, lng: s.lng }));
+  const plan = places.filter((p) => p.lat !== undefined && p.lng !== undefined && norm(p.name).includes(n) && !stars.some((s) => distanceM(s, { lat: p.lat!, lng: p.lng! }) < 20)).slice(0, 4)
     .map((p) => ({ id: `local:${p.id}`, name: p.name, detail: 'En vuestro plan', lat: p.lat!, lng: p.lng! }));
+  return [...stars, ...plan];
+}
+
+/** Perfil de desnivel de cada ruta (con la malla guardada no necesita red). */
+function useProfiles(routes: Route[]): (Profile | null)[] {
+  const [out, setOut] = useState<(Profile | null)[]>([]);
+  useEffect(() => {
+    let alive = true;
+    setOut([]);
+    if (!routes.length) return;
+    void Promise.all(routes.map((r) => elevationProfile(r.coords).catch(() => null))).then((x) => { if (alive) setOut(x); });
+    return () => { alive = false; };
+  }, [routes]);
+  return out;
 }
 
 type Picked = { kind: 'stop'; stop: MapStop; day: DayNum } | { kind: 'heart'; pin: Pin } | { kind: 'poi'; item: NearItem; filter: Filter } | { kind: 'found'; found: Found } | { kind: 'hotel' };
@@ -139,6 +161,11 @@ export function MapScreen() {
   const [error, setError] = useState<string | null>(null);
   const [picked, setPicked] = useState<Picked | null>(null);
   const [walk, setWalk] = useState<Route | null>(null);
+  const [walkAlts, setWalkAlts] = useState<Route[]>([]);
+  const [threeD, setThreeD] = useLocal('roma-3d', false);
+  const [showMetro, setShowMetro] = useLocal('roma-metro', false);
+  const metro = useMetro();
+  const saved = useSaved();
   const [dayPath, setDayPath] = useState<{ route: Route; stops: MapStop[]; day: DayNum } | null>(null);
   const [routing, setRouting] = useState<string | null>(null);
   const [fallback, setFallback] = useState(false);
@@ -171,6 +198,9 @@ export function MapScreen() {
   const [focus, setFocus] = useState<{ lat: number; lng: number; key: number; shiftY?: number } | null>(null);
   const memories = [...(useKind<Entity>('diary') ?? []), ...(useKind<Entity>('photo') ?? [])].filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number');
   const route = walk ?? dayPath?.route ?? null;
+  const profRoutes = useMemo(() => (walkAlts.length > 1 ? walkAlts : route ? [route] : []), [walkAlts, route]);
+  const profiles = useProfiles(profRoutes);
+  const routeProfile = walkAlts.length > 1 ? profiles[Math.max(0, walkAlts.indexOf(walk as Route))] : profiles[0];
 
   useEffect(() => {
     void cachedPois().then((c) => { if (c) { setPois(c.pois); setPoiAge(c.at); } });
@@ -248,11 +278,15 @@ export function MapScreen() {
     const out: MapPin[] = dayStops.stops.map((s) => ({ id: `stop:${s.placeId}`, lat: s.lat, lng: s.lng, kind: 'stop', color: DAY_HEX[day as DayNum], short: String(s.n), name: shortTitle(s.title), label: `${s.n}. ${s.title}`, status: s.status }));
     for (const d of allDots) out.push({ id: `dot:${d.day}:${d.stop.placeId}`, lat: d.stop.lat, lng: d.stop.lng, kind: 'dot', color: DAY_HEX[d.day], short: '', label: d.stop.title });
     for (const h of heartPins) out.push({ id: `heart:${h.id}`, lat: h.lat, lng: h.lng, kind: 'heart', color: '#C0583A', short: '', label: h.label });
+    for (const sv of saved) {
+      const onStop = dayStops.stops.some((st) => distanceM(st, sv) < 25) || (!!hotel && hotelInStops && distanceM(hotel, sv) < 25);
+      out.push({ id: `saved:${sv.id}`, lat: sv.lat, lng: sv.lng, kind: 'saved', color: '#E0A526', short: '', label: sv.name, badge: onStop });
+    }
     if (hotel && !hotelInStops) out.push({ id: 'hotel', lat: hotel.lat, lng: hotel.lng, kind: 'hotel', color: '#2B2522', short: 'H', label: 'Hotel' });
     if (nearOnMap) for (const n of near) out.push({ id: `poi:${n.id}`, lat: n.lat, lng: n.lng, kind: 'poi', color: POI_HEX[filter], short: '', label: n.name });
     if (picked?.kind === 'found') out.push({ id: `found:${picked.found.id}`, lat: picked.found.lat, lng: picked.found.lng, kind: 'found', color: '#4A7FA8', short: '', label: picked.found.name });
     return out;
-  }, [dayStops, allDots, heartPins, hotel, hotelInStops, nearOnMap, near, filter, picked, day]);
+  }, [dayStops, allDots, heartPins, hotel, hotelInStops, nearOnMap, near, filter, picked, day, saved]);
   const order = useMemo(() => (day && !route && dayStops.path.length > 1 ? { coords: dayStops.path.map((s) => [s.lng, s.lat] as [number, number]), color: DAY_HEX[day] } : null), [dayStops, day, route]);
 
   const showStop = (stop: MapStop, d: DayNum) => {
@@ -274,6 +308,15 @@ export function MapScreen() {
     else if (k === 'dot') { const [d, placeId] = [Number(rest[0]) as DayNum, rest.slice(1).join(':')]; pending.current = placeId; clearRoute(); setPicked(null); setDay(d); }
     else if (k === 'heart') { clearRoute(); const pin = heartPins.find((p) => p.id === key); if (pin) setPicked({ kind: 'heart', pin }); }
     else if (k === 'poi') { clearRoute(); const item = near.find((n) => n.id === key); if (item) setPicked({ kind: 'poi', item, filter }); }
+    else if (k === 'saved') {
+      const sv = saved.find((x) => x.id === key);
+      if (!sv) return;
+      const st = dayStops.stops.find((x) => distanceM(x, sv) < 25);
+      if (st && day) { showStop(st, day); return; }
+      clearRoute();
+      setPicked({ kind: 'found', found: { id: sv.id, name: sv.name, detail: sv.detail ?? '★ Guardado', lat: sv.lat, lng: sv.lng } });
+      setFocus({ lat: sv.lat, lng: sv.lng, key: Date.now() });
+    }
     else if (id === 'hotel') { clearRoute(); setPicked({ kind: 'hotel' }); }
   };
 
@@ -301,15 +344,16 @@ export function MapScreen() {
 
   const stopNav = () => { setNavigating(false); setFollow(false); stopSpeaking(); };
   /** Quita la ruta a una parada (la del recorrido del día se queda). */
-  const clearRoute = () => { setWalk(null); setDest(null); setArrived(null); stopNav(); };
+  const clearRoute = () => { setWalk(null); setWalkAlts([]); setDest(null); setArrived(null); stopNav(); };
 
   const walkTo = async (t: LatLng & { name: string }) => {
     const origin = me ?? hotel;
     if (!origin) { setError('Pulsa «Dónde estoy» para trazar la ruta desde donde estás.'); return; }
     setRouting('Calculando…');
-    const r = await footRoute(origin, t);
+    const rs = await footRoutes(origin, t);
+    const r = rs[0];
     setRouting(null);
-    if (r) { setWalk(r); setDest(t); setArrived(null); setError(null); } else setError(online ? 'No se ha podido calcular la ruta. Usa «Abrir en Google Maps» para verla en el mapa del móvil.' : 'No hay ruta guardada para ese punto. Con conexión, o con las calles descargadas, se calcula.');
+    if (r) { setWalk(r); setWalkAlts(rs); setDest(t); setArrived(null); setError(null); } else setError(online ? 'No se ha podido calcular la ruta. Usa «Abrir en Google Maps» para verla en el mapa del móvil.' : 'No hay ruta guardada para ese punto. Con conexión, o con las calles descargadas, se calcula.');
   };
 
   /** Recorrido a pie que une las paradas del día en orden, con el tiempo de cada tramo. Se calcula solo. */
@@ -333,7 +377,7 @@ export function MapScreen() {
 
   const startNav = () => {
     if (!walk || !dest) return;
-    setArrived(null); setStepIdx(1); setFollow(true); setNavigating(true); lastFix.current = null;
+    setArrived(null); setStepIdx(1); setFollow(true); setNavigating(true); lastFix.current = null; setWalkAlts([]);
     if (voice) speak(spoken(walk.steps, 1));
   };
 
@@ -348,7 +392,7 @@ export function MapScreen() {
   const search = (text: string) => {
     setQ(text);
     window.clearTimeout(typing.current);
-    const local = localMatches(text);
+    const local = localMatches(text, saved);
     if (text.trim().length < 2) { setResults(null); return; }
     setResults(local);
     if (text.trim().length < 3) return;
@@ -367,6 +411,14 @@ export function MapScreen() {
     void setMeta('map-recent', next);
   };
 
+  const toggleMetro = () => {
+    const v = !showMetro;
+    setShowMetro(v);
+    if (v && !metro) {
+      if (!online) { setError('El metro se guarda en el móvil cuando hay conexión; todavía no se ha descargado.'); return; }
+      void downloadMetro((q) => overpass(q, 60_000)).catch(() => setError('No se ha podido descargar el metro. Se reintentará solo con conexión.'));
+    }
+  };
   const t = picked ? target(picked) : null;
   const originLabel = me ? 'desde donde estás' : hotel ? 'desde el hotel' : '';
   const sheetStop = picked?.kind === 'stop' ? picked : null;
@@ -406,7 +458,7 @@ export function MapScreen() {
         </>
       ) : (
         <div class={`mapwrap${navigating ? ' navmode' : ''}${sheetStop ? ' sheetopen' : ''}`}>
-          <RomaMap pins={mapPins} me={me} route={route} order={order} fitKey={`${day}|${nearOnMap ? filter : ''}`} focus={focus} heading={heading} follow={follow} onPick={onPick} onLongPress={(p) => void longPress(p)} onBackground={() => { if (picked?.kind === 'stop') setPicked(null); }} onUserMove={() => setFollow(false)} onFail={() => setFallback(true)} />
+          <RomaMap pins={mapPins} me={me} route={route} alts={navigating ? [] : walkAlts.flatMap((r, i) => (r === walk ? [] : [{ i, coords: r.coords }]))} onPickAlt={(i) => { const r = walkAlts[i]; if (r) setWalk(r); }} threeD={threeD} metro={showMetro ? metro : null} order={order} fitKey={`${day}|${nearOnMap ? filter : ''}`} focus={focus} heading={heading} follow={follow} onPick={onPick} onLongPress={(p) => void longPress(p)} onBackground={() => { if (picked?.kind === 'stop') setPicked(null); }} onUserMove={() => setFollow(false)} onFail={() => setFallback(true)} />
           {!navigating && !sheetStop && next && (
             <button type="button" class="nextchip" onClick={() => showStop(next, day as DayNum)} aria-label={`Siguiente parada: ${next.n}, ${next.title}`}>
               <span class="stopnum small" style={{ background: DAY_HEX[day as DayNum] }} aria-hidden="true">{next.n}</span>
@@ -431,6 +483,10 @@ export function MapScreen() {
             );
           })()}
           {navigating && !follow && <button type="button" class="btn locate recenter" onClick={() => setFollow(true)}><Icon name="walk" /> Recentrar</button>}
+          <div class="mapctl" role="group" aria-label="Capas del mapa">
+            <button type="button" class="btn" aria-pressed={threeD} onClick={() => setThreeD(!threeD)}>3D</button>
+            <button type="button" class="btn" aria-pressed={showMetro} onClick={toggleMetro}><Icon name="train" size={16} /> Metro</button>
+          </div>
           <button type="button" class="btn locate" onClick={() => void whereAmI()} disabled={locating} aria-label="Dónde estoy"><Icon name="pin" /> {locating ? '…' : me ? 'Centrar en mí' : 'Dónde estoy'}</button>
           {sheetStop && (
             <StopSheet stop={dayStops.stops.find((s) => s.placeId === sheetStop.stop.placeId) ?? sheetStop.stop} total={dayStops.stops.length} color={DAY_HEX[sheetStop.day]} now={now} me={me} routing={!!routing && routing !== 'day'}
@@ -447,6 +503,21 @@ export function MapScreen() {
             <span><b class="num">{formatDuration(route.durationS)}</b> a pie · <span class="num">{formatDistance(route.distanceM)}</span>{route.offline && <span class="chip" title="Calculada con las calles guardadas en el móvil"> sin conexión</span>}{legStops ? <span class="small muted"> · recorrido del día, {legStops.length} paradas</span> : <span class="small muted"> {originLabel}</span>}</span>
             {walk && <button type="button" class="btn ghost" onClick={clearRoute}>Quitar ruta</button>}
           </div>
+          {walkAlts.length > 1 && !navigating && (
+            <div class="altlist" role="group" aria-label="Rutas posibles">
+              {walkAlts.map((r, i) => {
+                const pf = profiles[i];
+                return (
+                  <button type="button" key={i} class="altchip" aria-pressed={r === walk} onClick={() => setWalk(r)}>
+                    <b class="num">{formatDuration(r.durationS)}</b>
+                    <span class="small muted num">{formatDistance(r.distanceM)}{pf ? ` · ↑${pf.ascent} m` : ''}</span>
+                    <span class="small">{i === 0 ? 'Recomendada' : `Alternativa ${i}`}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <ElevationChart p={routeProfile} />
           {dest && !navigating && walk && <button type="button" class="btn primary" onClick={startNav}><Icon name="walk" /> Empezar a caminar</button>}
           {legStops && (
             <ol class="legs">
@@ -472,20 +543,46 @@ export function MapScreen() {
           {picked.kind === 'poi' && picked.item.poi && <p class="small muted">Dato de OpenStreetMap.</p>}
           {t?.place && <PlaceFacts place={t.place} />}
           {t && <p class="small muted">{me ? `A ${formatDistance(distanceM(me, t) * 1.3)} a pie.` : ''}</p>}
+          {t && <MetroNear p={t} />}
           {t && (
             <div class="stop-actions">
               <button type="button" class="btn primary" disabled={!!routing} onClick={() => void walkTo(t)}><Icon name="walk" /> {routing ? 'Calculando…' : 'Ruta a pie'}</button>
               <a class="btn" href={directionsUrl({ name: t.name, lat: t.lat, lng: t.lng })} target="_blank" rel="noopener"><Icon name="pin" /> Abrir en {isIOS() ? 'Apple Maps' : 'Google Maps'}</a>
+              {picked.kind !== 'heart' && <StarButton p={{ name: t.name, detail: picked.kind === 'found' ? picked.found.detail : undefined, lat: t.lat, lng: t.lng, placeId: t.place?.id }} />}
               {t.place?.phone && <a class="btn" href={`tel:${t.place.phone.replace(/[^\d+]/g, '')}`}><Icon name="phone" /> Llamar</a>}
             </div>
           )}
         </section>
       )}
+      <SavedList saved={saved} from={from} onShow={(sv) => { setNearOnMap(false); clearRoute(); setPicked({ kind: 'found', found: { id: sv.id, name: sv.name, detail: sv.detail ?? '★ Guardado', lat: sv.lat, lng: sv.lng } }); setFocus({ lat: sv.lat, lng: sv.lng, key: Date.now() }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
       <NearMe filter={filter} setFilter={(f) => { setFilter(f); setNearOnMap(true); setPicked(null); }} items={near} originLabel={originLabel || 'desde el centro de Roma'} onLocate={() => void whereAmI()} locating={locating} hasMe={!!me}
         onShow={(n) => { setNearOnMap(true); setFocus({ lat: n.lat, lng: n.lng, key: Date.now() }); setPicked({ kind: 'poi', item: n, filter }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} poiAge={poiAge} />
       <OfflineCard />
       <p class="small muted">Mapa © OpenStreetMap y OpenFreeMap. Rutas: routing.openstreetmap.de. Buscador: Photon.</p>
     </div>
+  );
+}
+
+/** Los sitios con ⭐ de los dos, ordenados por cercanía. Se ven también sin conexión. */
+function SavedList({ saved, from, onShow }: { saved: SavedEntity[]; from: LatLng; onShow: (s: SavedEntity) => void }) {
+  const who = useSettings().profile ?? 'jesus';
+  const items = useMemo(() => saved.map((s) => ({ s, d: distanceM(from, s) * 1.3 })).sort((a, b) => a.d - b.d), [saved, from.lat, from.lng]);
+  return (
+    <section class="stack" aria-labelledby="saved-title">
+      <h2 id="saved-title">Guardados ★</h2>
+      {items.length === 0 && <p class="small muted">Toca <b>☆ Guardar</b> en una parada o en cualquier sitio del mapa y quedará aquí para los dos. Lucía lo verá también.</p>}
+      {items.map(({ s, d }) => (
+        <article key={s.id} class="card stack" style={{ gap: '0.3rem' }}>
+          <div class="spread"><b>★ {s.name}</b><span class="chip num">{formatDistance(d)}</span></div>
+          <p class="small muted">{s.detail ? `${s.detail} · ` : ''}{s.author === who ? 'Lo guardaste tú' : `Lo guardó ${s.author === 'lucia' ? 'Lucía' : 'Jesús'} ♥`}</p>
+          <div class="stop-actions">
+            <button type="button" class="btn" onClick={() => onShow(s)}><Icon name="map" /> Ver en el mapa</button>
+            <a class="btn" href={directionsUrl({ name: s.name, lat: s.lat, lng: s.lng })} target="_blank" rel="noopener"><Icon name="walk" /> Cómo llegar</a>
+            <button type="button" class="btn ghost" onClick={() => void toggleSaved(saved, { name: s.name, lat: s.lat, lng: s.lng, placeId: s.placeId })}>Quitar</button>
+          </div>
+        </article>
+      ))}
+    </section>
   );
 }
 

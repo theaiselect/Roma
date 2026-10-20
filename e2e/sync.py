@@ -62,5 +62,18 @@ with sync_playwright() as p:
     l.goto(f'{BASE}/mas/gastos?now={NOW}'); l.wait_for_timeout(2500)
     check('gasto offline: llega al móvil de Lucía al recuperar red', l.get_by_text('Gelato offline').count() > 0)
 
+    # 4) Sitio guardado con ⭐: Jesús lo guarda y Lucía lo ve en «Guardados» (aquí el mapa cae al esquema: no hay internet)
+    j.goto(f'{BASE}/mapa?now={NOW}'); l.goto(f'{BASE}/mapa?now={NOW}')
+    j.wait_for_selector('.schematic', timeout=40000)
+    j.locator('.schematic g[role=button]').first.click(); j.wait_for_timeout(500)
+    j.get_by_role('button', name=re.compile('Guardar')).first.click(); j.wait_for_timeout(500)
+    check('guardados: Jesús ve «★ Guardado» y el sitio en su lista', j.get_by_role('button', name=re.compile('Guardado')).count() > 0 and j.locator('#saved-title ~ article').count() == 1)
+    sync_now(j); sync_now(l)
+    l.goto(f'{BASE}/mapa?now={NOW}'); l.wait_for_timeout(3000)
+    check('guardados: Lucía lo ve en su lista, guardado por Jesús', l.locator('#saved-title ~ article').count() == 1 and 'Lo guardó Jesús' in l.locator('#saved-title ~ article').inner_text())
+    l.get_by_role('button', name='Quitar', exact=True).click(); l.wait_for_timeout(500); sync_now(l); sync_now(j)
+    j.goto(f'{BASE}/mapa?now={NOW}'); j.wait_for_timeout(3000)
+    check('guardados: si Lucía lo quita, desaparece también en el de Jesús', j.locator('#saved-title ~ article').count() == 0)
+
     b.close()
 sys.exit(0 if ok else 1)

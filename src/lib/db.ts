@@ -6,7 +6,7 @@ import { getSettings } from '@/lib/settings';
 // ── Modelo de datos vivos ────────────────────────────────────────
 export type EntityKind =
   | 'expense' | 'check' | 'diary' | 'photo' | 'letter' | 'capsule'
-  | 'vote' | 'answer' | 'song' | 'state' | 'ticket' | 'gift';
+  | 'vote' | 'answer' | 'song' | 'state' | 'ticket' | 'gift' | 'saved';
 
 export interface Entity {
   id: string;

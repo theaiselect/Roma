@@ -36,13 +36,31 @@ interface OsrmResponse {
   routes?: { distance: number; duration: number; geometry: { coordinates: [number, number][] }; legs?: { distance?: number; duration?: number; steps?: OsrmStep[] }[] }[];
 }
 
+type OsrmRoute = NonNullable<OsrmResponse['routes']>[number];
+const toRoute = (x: OsrmRoute): Route => ({
+  distanceM: x.distance, durationS: x.duration, coords: x.geometry.coordinates,
+  steps: parseSteps(x.legs), legs: (x.legs ?? []).map((l) => ({ distanceM: l.distance ?? 0, durationS: l.duration ?? 0 })),
+});
+
 export function parseOsrm(r: OsrmResponse | null): Route | null {
   const x = r?.code === 'Ok' ? r.routes?.[0] : undefined;
-  if (!x) return null;
-  return {
-    distanceM: x.distance, durationS: x.duration, coords: x.geometry.coordinates,
-    steps: parseSteps(x.legs), legs: (x.legs ?? []).map((l) => ({ distanceM: l.distance ?? 0, durationS: l.duration ?? 0 })),
-  };
+  return x ? toRoute(x) : null;
+}
+
+/** Todas las rutas que devuelve OSRM (la mejor primero y, si hay, alternativas distintas). */
+export function parseOsrmAll(r: OsrmResponse | null): Route[] {
+  return r?.code === 'Ok' ? (r.routes ?? []).map(toRoute) : [];
+}
+
+/** Quita rutas casi idénticas (misma distancia ±3 % y mismo tiempo ±5 %) y deja como mucho `max`. */
+export function distinctRoutes(routes: Route[], max = 3): Route[] {
+  const out: Route[] = [];
+  for (const r of routes) {
+    if (out.some((o) => Math.abs(o.distanceM - r.distanceM) / o.distanceM < 0.03 && Math.abs(o.durationS - r.durationS) / o.durationS < 0.05)) continue;
+    out.push(r);
+    if (out.length >= max) break;
+  }
+  return out;
 }
 
 /** Ruta a pie por varios puntos, en orden (sirve para «la ruta del día»). Con un solo tramo es la ruta de siempre. */
@@ -60,6 +78,17 @@ export async function footRouteVia(points: LatLng[]): Promise<Route | null> {
 }
 
 export const footRoute = (from: LatLng, to: LatLng): Promise<Route | null> => footRouteVia([from, to]);
+
+/** Ruta a pie a un punto con alternativas (hasta 3). Sin red, solo la que dan las calles guardadas. */
+export async function footRoutes(from: LatLng, to: LatLng): Promise<Route[]> {
+  if (navigator.onLine) {
+    const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true&alternatives=3`;
+    const all = distinctRoutes(parseOsrmAll(await getJson<OsrmResponse>(url, undefined, 8000)));
+    if (all.length) return all;
+  }
+  const one = await footRouteVia([from, to]);
+  return one ? [one] : [];
+}
 
 // ── Buscador ────────────────────────────────────────────────────
 export interface Found { id: string; name: string; detail: string; lat: number; lng: number }

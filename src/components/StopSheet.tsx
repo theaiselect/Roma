@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { HeartBurst } from '@/components/HeartBurst';
+import { MetroNear, StarButton, WikiBlock } from '@/components/MapExtras';
 import { Icon } from '@/components/Icon';
 import { PlaceFacts, telHref } from '@/components/StopCard';
 import { placeById } from '@/data/places';
@@ -78,6 +79,7 @@ export function StopSheet({ stop, total, color, now, me, routing, onClose, onWal
         {res && rst && <a class={`chip ${TICKET_CLS[rst]}`} href="/mas/reservas" style={{ textDecoration: 'none' }}><Icon name="ticket" size={14} /> {res.title}: {STATUS_LABEL[rst]}</a>}
       </div>
 
+      <WikiBlock placeId={stop.placeId} />
       {first.note && <p class="small">{first.note}</p>}
       {first.pending && <p class="small pending">⚠️ Pendiente de confirmar: {first.pending}</p>}
       {stop.visits.length > 1 && <p class="small muted">Volvéis aquí más tarde: {stop.visits.slice(1).map((v) => `${v.start ?? ''} ${v.title}`.trim()).join(' · ')}.</p>}
@@ -88,6 +90,7 @@ export function StopSheet({ stop, total, color, now, me, routing, onClose, onWal
       ) : (
         <p class="small muted"><Icon name="sun" size={16} /> Atardecer a las <span class="num">{romeParts(sunsetAt(first.date)).time}</span></p>
       )}
+      <MetroNear p={stop} />
       {dist !== null && <p class="small"><Icon name="walk" size={16} /> A <b class="num">{formatDistance(dist)}</b> de donde estás (unos <span class="num">{Math.max(1, Math.round(dist / 80))} min</span> a pie).</p>}
 
       {letters.length > 0 && <a class="chip" href="/nosotros/cartas" style={{ textDecoration: 'none', background: 'color-mix(in srgb, var(--rosa-romano) 30%, var(--tarjeta))' }}>♥ Hay una carta para ti que se abre en este sitio</a>}
@@ -96,6 +99,7 @@ export function StopSheet({ stop, total, color, now, me, routing, onClose, onWal
         <button type="button" class="btn primary" disabled={routing} onClick={onWalk}><Icon name="walk" /> {routing ? 'Calculando…' : 'Ruta a pie'}</button>
         <a class="btn" href={directionsUrl({ name: place?.name ?? stop.title, address: place?.address, lat: stop.lat, lng: stop.lng })} target="_blank" rel="noopener"><Icon name="pin" /> {isIOS() ? 'Apple Maps' : 'Google Maps'}</a>
         <button type="button" class={`btn${done ? ' primary' : ''}`} aria-pressed={done} onClick={toggleDone}><Icon name="check" /> {done ? 'Hecho ♥' : 'Marcar como hecho'}</button>
+        <StarButton p={{ name: place?.name ?? stop.title, lat: stop.lat, lng: stop.lng, placeId: stop.placeId }} />
         {place?.phone && <a class="btn" href={telHref(place.phone)}><Icon name="phone" /> Llamar</a>}
         <a class="btn ghost" href={`/plan/${first.day}#${first.id}`}>Ver en el plan</a>
       </div>

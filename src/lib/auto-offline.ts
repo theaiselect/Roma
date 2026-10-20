@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
+import { METRO_MAX_AGE } from '@/lib/metro-map';
+import { RELIEF_MAX_AGE } from '@/lib/relief';
 import { offlineStatus, prepareOffline, type OfflineStatus, type Stage } from '@/lib/offline-data';
 
 // Lo necesario para ir sin conexión se descarga SOLO, en segundo plano, cuando hay conexión y la primera vez.
@@ -6,6 +8,7 @@ import { offlineStatus, prepareOffline, type OfflineStatus, type Stage } from '@
 const DAY = 24 * 3600_000;
 export const MAP_MAX_AGE = 30 * DAY;
 export const DATA_MAX_AGE = 14 * DAY;
+export const PHOTOS_MAX_AGE = 45 * DAY;
 
 /** Qué etapas faltan o están viejas. El tiempo se refresca por su cuenta. */
 export function stagesNeeded(s: OfflineStatus, now: number): Stage[] {
@@ -14,6 +17,9 @@ export function stagesNeeded(s: OfflineStatus, now: number): Stage[] {
   if (!s.graph || now - s.graph.at > DATA_MAX_AGE) out.push('graph');
   if (!s.places || now - s.places.at > DATA_MAX_AGE) out.push('places');
   if (!s.pois || now - s.pois.at > DATA_MAX_AGE) out.push('pois');
+  if (!s.metro || now - s.metro.at > METRO_MAX_AGE) out.push('metro');
+  if (!s.relief || now - s.relief.at > RELIEF_MAX_AGE) out.push('relief');
+  if (s.photos.have < s.photos.total || (s.photos.at !== undefined && now - s.photos.at > PHOTOS_MAX_AGE)) out.push('photos');
   if (s.blobs.missing > 0) out.push('files');
   return out;
 }
@@ -38,7 +44,7 @@ export async function runAuto(force = false): Promise<void> {
   if (!force && (c?.saveData || c?.type === 'cellular')) { set({ phase: 'waiting-wifi' }); return; }
   let need: Stage[];
   try {
-    need = force ? ['map', 'graph', 'places', 'pois', 'weather', 'files'] : stagesNeeded(await offlineStatus(), Date.now());
+    need = force ? ['map', 'graph', 'places', 'pois', 'metro', 'relief', 'photos', 'weather', 'files'] : stagesNeeded(await offlineStatus(), Date.now());
   } catch { return; }
   if (!need.length) { set({ phase: state.ranHere ? 'done' : 'idle', failed: [] }); return; }
   running = true;

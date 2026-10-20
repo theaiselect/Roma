@@ -7,6 +7,7 @@ import type { OfflineStatus } from '@/lib/offline-data';
 const NOW = 1_800_000_000_000;
 const full = (over: Partial<OfflineStatus> = {}): OfflineStatus => ({
   map: { at: NOW - 1000, tiles: 10, bytes: 1 }, graph: { at: NOW - 1000, nodes: 1, streets: 1 }, places: { at: NOW - 1000, count: 1 }, pois: { at: NOW - 1000, count: 1 },
+  metro: { at: NOW - 1000, stations: 60 }, relief: { at: NOW - 1000 }, photos: { at: NOW - 1000, have: 20, total: 20 },
   weather: NOW, blobs: { total: 3, missing: 0 }, ...over,
 });
 

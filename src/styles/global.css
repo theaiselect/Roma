@@ -293,3 +293,20 @@ input[type='search']::-webkit-search-cancel-button { -webkit-appearance: none; }
 .arrival { position: relative; display: grid; gap: 0.5rem; padding: 1rem; border-radius: var(--radius); overflow: hidden; background: color-mix(in srgb, var(--rosa-romano) 26%, var(--tarjeta)); border: 1px solid color-mix(in srgb, var(--terracotta) 40%, var(--linea)); box-shadow: var(--sombra); }
 .arrival h2 { margin: 0; }
 .arrival-line { font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.25; margin: 0; }
+
+/* ── Mapa: capas, rutas alternativas, desnivel y ficha con foto ── */
+.mapctl { position: absolute; right: 10px; bottom: 44px; z-index: 2; display: grid; gap: 0.4rem; }
+.mapctl .btn { min-height: 40px; padding: 0 0.7rem; font-size: 0.85rem; background: var(--tarjeta); box-shadow: var(--sombra); }
+.mapctl .btn[aria-pressed='true'] { background: var(--terracotta); color: #fff; border-color: var(--terracotta); }
+.mapwrap.sheetopen .mapctl { display: none; }
+.altlist { display: flex; gap: 0.45rem; overflow-x: auto; padding-bottom: 0.1rem; }
+.altchip { flex: 1 0 auto; display: grid; gap: 0.05rem; text-align: left; padding: 0.45rem 0.7rem; border-radius: 12px; border: 1.5px solid var(--linea); background: var(--tarjeta); color: var(--tinta); font: inherit; min-height: 48px; }
+.altchip[aria-pressed='true'] { border-color: #4A7FA8; background: color-mix(in srgb, #4A7FA8 14%, var(--tarjeta)); }
+.elev { display: grid; gap: 0.2rem; }
+.elev svg { width: 100%; height: 40px; display: block; }
+.elev-fill { fill: color-mix(in srgb, #4A7FA8 22%, transparent); }
+.elev-line { fill: none; stroke: #4A7FA8; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.wikirow { display: grid; grid-template-columns: auto 1fr; gap: 0.7rem; align-items: start; }
+.wikirow:not(:has(img)) { grid-template-columns: 1fr; }
+.wikirow img { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; background: var(--linea); }
+.wikitext { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }

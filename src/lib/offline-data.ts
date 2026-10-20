@@ -3,9 +3,12 @@ import { db, getMeta, setMeta } from '@/lib/db';
 import { distanceM, type LatLng } from '@/lib/geo';
 import { buildGraph, fromStored, routeLeg, snap, toStored, type Graph, type OfflineLeg, type RawWay } from '@/lib/graph';
 import { downloadRoma, mapDownloadInfo, type MapDownload } from '@/lib/offline-map';
+import { downloadMetro, cachedMetro } from '@/lib/metro-map';
 import { refreshPois, ROME_BBOX, ROME_CENTER, type Found } from '@/lib/osm';
+import { downloadRelief, reliefInfo } from '@/lib/relief';
 import { ensureBlob } from '@/lib/sync';
 import { forecastCached, refreshForecast } from '@/lib/weather';
+import { downloadWiki, wikiStatus } from '@/lib/wiki';
 
 // ── Overpass con espejos ────────────────────────────────────────
 const MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
@@ -282,26 +285,33 @@ export interface OfflineStatus {
   graph: GraphInfo | undefined;
   places: { at: number; count: number } | undefined;
   pois: { at: number; count: number } | undefined;
+  metro: { at: number; stations: number } | undefined;
+  relief: { at: number } | undefined;
+  photos: { at: number | undefined; have: number; total: number };
   weather: number | null;
   blobs: { total: number; missing: number };
 }
 
 export async function offlineStatus(): Promise<OfflineStatus> {
-  const [map, graph, pl, pois, b] = await Promise.all([
-    mapDownloadInfo(), getMeta<GraphInfo>(GRAPH_INFO), getMeta<PlaceIdx>(PLACES_KEY), getMeta<{ at: number; pois: unknown[] }>('osm-pois'), blobStatus(),
+  const [map, graph, pl, pois, b, metro, relief, photos] = await Promise.all([
+    mapDownloadInfo(), getMeta<GraphInfo>(GRAPH_INFO), getMeta<PlaceIdx>(PLACES_KEY), getMeta<{ at: number; pois: unknown[] }>('osm-pois'), blobStatus(), cachedMetro(), reliefInfo(), wikiStatus(),
   ]);
   return {
     map, graph,
     places: pl ? { at: pl.at, count: pl.items.length } : undefined,
     pois: pois ? { at: pois.at, count: pois.pois.length } : undefined,
+    metro: metro ? { at: metro.at, stations: metro.stations.length } : undefined,
+    relief,
+    photos,
     weather: forecastCached()?.fetchedAt ?? null,
     blobs: { total: b.total, missing: b.missing.length },
   };
 }
 
-export type Stage = 'map' | 'graph' | 'places' | 'pois' | 'weather' | 'files';
+export type Stage = 'map' | 'graph' | 'places' | 'pois' | 'metro' | 'relief' | 'photos' | 'weather' | 'files';
 export const STAGE_LABEL: Record<Stage, string> = {
-  map: 'Mapa de Roma', graph: 'Calles para rutas', places: 'Sitios para buscar', pois: 'Fuentes, baños y farmacias', weather: 'Tiempo', files: 'Entradas y fotos',
+  map: 'Mapa de Roma', graph: 'Calles para rutas', places: 'Sitios para buscar', pois: 'Fuentes, baños y farmacias', metro: 'Metro', relief: 'Relieve (desnivel)',
+  photos: 'Fotos de los sitios', weather: 'Tiempo', files: 'Entradas y fotos',
 };
 
 /** Lo descarga todo, etapa a etapa. Una etapa que falla no impide las demás; devuelve las que fallaron. */
@@ -316,6 +326,9 @@ export async function prepareOffline(onStage: (s: Stage, done: number, total: nu
   await run('graph', () => downloadGraph((d, t) => onStage('graph', d, t)));
   await run('places', () => downloadPlaces((d, t) => onStage('places', d, t)));
   await run('pois', async () => { if (!(await refreshPois(true))) throw new Error('pois'); });
+  await run('metro', () => downloadMetro((q) => overpass(q, 60_000)));
+  await run('relief', () => downloadRelief((d, t) => onStage('relief', d, t)));
+  await run('photos', () => downloadWiki((d, t) => onStage('photos', d, t)));
   await run('weather', async () => { if (!(await refreshForecast())) throw new Error('weather'); });
   await run('files', async () => { const r = await downloadBlobs((d, t) => onStage('files', d, t)); if (r.failed) throw new Error('files'); });
   return failed;

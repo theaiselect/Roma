@@ -24,7 +24,7 @@ export interface Store {
   block(ip: string, seconds: number): Promise<void>;
 }
 
-export const KINDS = new Set(['expense', 'check', 'diary', 'photo', 'letter', 'capsule', 'vote', 'answer', 'song', 'state', 'ticket', 'gift']);
+export const KINDS = new Set(['expense', 'check', 'diary', 'photo', 'letter', 'capsule', 'vote', 'answer', 'song', 'state', 'ticket', 'gift', 'saved']);
 const MAX_ENTITY_BYTES = 64 * 1024;
 
 export function validate(raw: unknown): ServerEntity | null {

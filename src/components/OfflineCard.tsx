@@ -25,6 +25,9 @@ export function rows(s: OfflineStatus): Row[] {
     { stage: 'graph', ok: !!s.graph, text: s.graph ? `${s.graph.nodes.toLocaleString('es-ES')} cruces · ${day(s.graph.at)}` : 'unos 15 MB', need: 'calcular rutas a pie y recalcular si te desvías' },
     { stage: 'places', ok: !!s.places, text: s.places ? `${s.places.count.toLocaleString('es-ES')} sitios · ${day(s.places.at)}` : 'unos 3 MB', need: 'buscar sitios y saber qué hay en un punto' },
     { stage: 'pois', ok: !!s.pois, text: s.pois ? `${s.pois.count.toLocaleString('es-ES')} puntos · ${day(s.pois.at)}` : 'poco', need: 'fuentes, baños, farmacias, cafés y heladerías cerca' },
+    { stage: 'metro', ok: !!s.metro, text: s.metro ? `${s.metro.stations} estaciones · ${day(s.metro.at)}` : 'poco', need: 'ver el metro en el mapa y la estación más cercana' },
+    { stage: 'relief', ok: !!s.relief, text: s.relief ? `guardado ${day(s.relief.at)}` : 'poco', need: 'saber cuánta cuesta tiene cada ruta' },
+    { stage: 'photos', ok: s.photos.have >= s.photos.total, text: s.photos.have >= s.photos.total ? `${s.photos.total} sitios` : `faltan ${s.photos.total - s.photos.have} de ${s.photos.total}`, need: 'ver la foto y el resumen de cada monumento' },
     { stage: 'weather', ok: s.weather !== null, text: s.weather !== null ? `guardado ${day(s.weather)}` : 'poco', need: 'ver el tiempo' },
     { stage: 'files', ok: s.blobs.missing === 0, text: s.blobs.total === 0 ? 'no hay archivos todavía' : s.blobs.missing === 0 ? `${s.blobs.total} archivos` : `faltan ${s.blobs.missing} de ${s.blobs.total}`, need: 'abrir entradas, fotos y tiques' },
   ];

@@ -14,12 +14,12 @@ STYLE={'version':8,'glyphs':'https://tiles.openfreemap.org/fonts/{fontstack}/{ra
                  {'id':'roads','type':'line','source':'ofm','source-layer':'transportation','paint':{'line-color':'#fff'}}]}
 TILEJSON={'tilejson':'3.0.0','tiles':['https://tiles.openfreemap.org/planet/v1/{z}/{x}/{y}.pbf'],'minzoom':0,'maxzoom':14}
 PHOTON={'features':[{'geometry':{'coordinates':[12.4768,41.8986]},'properties':{'osm_id':1,'osm_type':'W','name':'Pantheon','street':'Piazza della Rotonda','city':'Roma','district':'Pigna'}}]}
-def osrm(n_legs=1):
+def osrm(n_legs=1, alt=False):
     steps=[{'distance':400,'name':'Via Test','maneuver':{'type':'depart','location':[12.4823,41.9060]}},
            {'distance':800,'name':'Via del Corso','maneuver':{'type':'turn','modifier':'left','location':[12.4800,41.9020]}},
            {'distance':0,'name':'','maneuver':{'type':'arrive','modifier':'right','location':[12.4768,41.8986]}}]
     return {'code':'Ok','routes':[{'distance':1234*n_legs,'duration':900*n_legs,'geometry':{'coordinates':[[12.4823,41.9060],[12.4800,41.9020],[12.4768,41.8986]]},
-            'legs':[{'distance':1234,'duration':900,'steps':steps if n_legs==1 else steps[:1]} for _ in range(n_legs)]}]}
+            'legs':[{'distance':1234,'duration':900,'steps':steps if n_legs==1 else steps[:1]} for _ in range(n_legs)]}]+([{'distance':1500,'duration':1100,'geometry':{'coordinates':[[12.4823,41.9060],[12.4790,41.9040],[12.4768,41.8986]]},'legs':[{'distance':1500,'duration':1100,'steps':steps}]}] if alt else [])}
 OVERPASS={'elements':[{'type':'node','id':11,'lat':41.9012,'lon':12.4831,'tags':{'amenity':'drinking_water'}},
                       {'type':'node','id':12,'lat':41.9040,'lon':12.4850,'tags':{'amenity':'toilets','fee':'no'}},
                       {'type':'node','id':13,'lat':41.9055,'lon':12.4860,'tags':{'amenity':'pharmacy','name':'Farmacia Test'}}]}
@@ -32,6 +32,17 @@ def _ways():
 WAYS=_ways()
 PLACES={'elements':[{'type':'node','lat':41.9+k*0.0003,'lon':12.49,'tags':{'name':f'Trattoria {k}','amenity':'restaurant'}} for k in range(60)]+[{'type':'node','lat':41.9060,'lon':12.4880,'tags':{'name':'Caffè Prova','amenity':'cafe'}},{'type':'node','lat':41.9010,'lon':12.4850,'tags':{'name':'Pantheon','historic':'monument'}}]}
 counts={'tiles':0}
+METRO={'elements':[
+  {'type':'relation','id':1,'tags':{'route':'subway','ref':'A'},'members':[{'type':'way','ref':10,'role':'','geometry':[{'lat':41.9061,'lon':12.4825},{'lat':41.9035,'lon':12.4895},{'lat':41.9010,'lon':12.5010}]}]},
+  {'type':'relation','id':2,'tags':{'route':'subway','ref':'A'},'members':[{'type':'way','ref':10,'role':'','geometry':[{'lat':41.9061,'lon':12.4825},{'lat':41.9035,'lon':12.4895},{'lat':41.9010,'lon':12.5010}]}]},
+  {'type':'relation','id':3,'tags':{'route':'subway','ref':'B'},'members':[{'type':'way','ref':20,'role':'','geometry':[{'lat':41.8903,'lon':12.4922},{'lat':41.9010,'lon':12.5010}]}]},
+  {'type':'node','id':1,'lat':41.9061,'lon':12.4825,'tags':{'name':'Spagna','railway':'station','station':'subway'}},
+  {'type':'node','id':2,'lat':41.9035,'lon':12.4895,'tags':{'name':'Barberini','railway':'station','station':'subway'}},
+  {'type':'node','id':3,'lat':41.9010,'lon':12.5010,'tags':{'name':'Termini','railway':'station','station':'subway'}},
+  {'type':'node','id':4,'lat':41.8903,'lon':12.4922,'tags':{'name':'Colosseo','railway':'station','station':'subway'}}]}
+WIKI_TITLES=['Coliseo','Foro Romano','Palatino','Panteón de Agripa','Fontana de Trevi','Plaza Navona','Plaza de España (Roma)','Villa Borghese','Plaza del Popolo','Trastevere','Museos Vaticanos','Basílica de San Pedro','Palacio Barberini',"Castillo de Sant'Angelo",'Boca de la Verdad','Circo Máximo','Aventino','Janículo','Tempietto de Bramante','Gueto de Roma','Teatro de Marcelo','Monumento a Víctor Manuel II','Plaza del Capitolio','Estación de Roma Termini','Museos Capitolinos','San Luigi dei Francesi',"Sant'Ignazio de Roma",'San Pietro in Vincoli']
+WIKI={'query':{'pages':[{'title':t,'index':i+1,'extract':'Texto de prueba sobre '+t+'.','thumbnail':{'source':'https://upload.wikimedia.org/test/'+str(i)+'.png','width':640,'height':480}} for i,t in enumerate(WIKI_TITLES)]}}
+PNG=bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360f8ffff3f0005fe02fea75ad08f0000000049454e44ae426082')
 def mock(route):
     u=route.request.url
     j=lambda o:route.fulfill(status=200,content_type='application/json',headers={'access-control-allow-origin':'*'},body=json.dumps(o))
@@ -41,10 +52,17 @@ def mock(route):
         counts['tiles']+=1
         return route.fulfill(status=200,headers={'access-control-allow-origin':'*'},content_type='application/x-protobuf',body=b'')
     if 'photon.komoot.io' in u: return j(PHOTON)
-    if 'routing.openstreetmap.de' in u: return j(osrm(u.split('/foot/')[1].split('?')[0].count(';')))
+    if 'routing.openstreetmap.de' in u: return j(osrm(u.split('/foot/')[1].split('?')[0].count(';'), 'alternatives=3' in u))
+    if 'wikipedia.org' in u: return j(WIKI)
+    if 'upload.wikimedia.org' in u: return route.fulfill(status=200,headers={'access-control-allow-origin':'*'},content_type='image/png',body=PNG)
+    if 'open-meteo.com/v1/elevation' in u:
+        from urllib.parse import urlparse, parse_qs
+        lats=[float(x) for x in parse_qs(urlparse(u).query)['latitude'][0].split(',')]
+        return j({'elevation':[round(30+(41.91-la)*2000) for la in lats]})
     if 'open-meteo.com' in u: return j({'daily':{'time':['2026-10-31'],'weather_code':[1],'temperature_2m_max':[20],'temperature_2m_min':[11],'precipitation_probability_max':[10]}})
     if 'overpass-api.de' in u:
         from urllib.parse import unquote_plus; q=unquote_plus(route.request.post_data or '')
+        if 'route"="subway' in q: return j(METRO)
         if 'out tags geom' in q: return j(WAYS)
         if 'nwr["name"]' in q: return j(PLACES)
         return j(OVERPASS)
@@ -54,7 +72,7 @@ with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/opt/pw-browsers/chromium',args=['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     ctx=b.new_context(viewport={'width':412,'height':900},is_mobile=True,has_touch=True,locale='es-ES',timezone_id='Europe/Madrid',service_workers='block',
                       permissions=['geolocation'],geolocation={'latitude':41.9060,'longitude':12.4823})
-    for host in ['tiles.openfreemap.org','photon.komoot.io','routing.openstreetmap.de','overpass-api.de','api.open-meteo.com']:
+    for host in ['tiles.openfreemap.org','photon.komoot.io','routing.openstreetmap.de','overpass-api.de','api.open-meteo.com','es.wikipedia.org','upload.wikimedia.org']:
         ctx.route(f'**://{host}/**',mock)
     pg=ctx.new_page(); errs=[]
     pg.on('pageerror',lambda e:errs.append(str(e))); pg.on('console',lambda m:print('CONSOLE',m.text[:300]) if 'offline' in m.text else None)
@@ -96,6 +114,40 @@ with sync_playwright() as p:
     box0=pg.locator('.romamap').bounding_box()
     pg.mouse.click(box0['x']+8,box0['y']+box0['height']*0.35); pg.wait_for_timeout(400)
     check('mapa: tocar el mapa vacío cierra la ficha', pg.locator('.stopsheet').count()==0)
+    # ── Extras del mapa: foto del sitio, metro cercano, estrella, 3D, capa de metro ──
+    def open_stop(pat):
+        pg.evaluate("(pat=>{const m=window.__romaMap;const f=m.querySourceFeatures('pins').filter(f=>f.properties.kind==='stop'&&new RegExp(pat).test(f.properties.id))[0];m.jumpTo({center:f.geometry.coordinates,zoom:16})})",pat); pg.wait_for_timeout(700)
+        xy=pg.evaluate("(pat=>{const m=window.__romaMap;const f=m.querySourceFeatures('pins').filter(f=>f.properties.kind==='stop'&&new RegExp(pat).test(f.properties.id))[0];if(!f)return null;const p=m.project(f.geometry.coordinates);const r=m.getCanvas().getBoundingClientRect();return {x:r.left+p.x,y:r.top+p.y}})",pat)
+        if not xy: return False
+        pg.mouse.click(xy['x'],xy['y']); pg.wait_for_timeout(700); return True
+    got=open_stop('^stop:(colosseo|foro-romano|palatino|pantheon|trevi|navona|piazza-spagna)$')
+    check('extras: hay una parada del día con ficha de monumento', got and pg.locator('.stopsheet').count()==1)
+    try: pg.wait_for_selector('.stopsheet .wikirow img',timeout=6000)
+    except Exception: pass
+    check('ficha: foto y resumen de Wikipedia con atribución', pg.locator('.stopsheet .wikirow img').count()==1 and 'Texto de prueba' in pg.locator('.stopsheet .wikirow').inner_text() and pg.locator('.stopsheet .wikirow').get_by_role('link',name='Wikipedia').count()==1)
+    check('ficha: metro más cercano con línea y minutos', pg.locator('.stopsheet').get_by_text(re.compile(r'Metro .* a unos \d+ min a pie')).count()==1)
+    pg.locator('.stopsheet').get_by_role('button',name=re.compile('Guardar')).click(); pg.wait_for_timeout(600)
+    check('estrella: «☆ Guardar» pasa a «★ Guardado»', pg.locator('.stopsheet').get_by_role('button',name=re.compile('Guardado')).count()==1)
+    n_saved=pg.evaluate("new Set(window.__romaMap.querySourceFeatures('pins').filter(f=>f.properties.kind==='saved').map(f=>f.properties.id)).size")
+    check(f'estrella: el sitio aparece con su estrella en el mapa ({n_saved})', n_saved==1)
+    check('estrella: sale en la lista «Guardados»', pg.get_by_role('heading',name=re.compile('Guardados')).count()==1 and pg.locator('#saved-title ~ article').count()==1 and 'Lo guardaste tú' in pg.locator('#saved-title ~ article').inner_text())
+    pg.get_by_role('button',name='Cerrar la ficha').click(); pg.wait_for_timeout(300)
+    pg.get_by_label('Buscar un sitio').fill(WIKI_TITLES[0][:4]); pg.wait_for_timeout(500)
+    pg.get_by_label('Buscar un sitio').fill('')
+    # 3D
+    pg.get_by_role('group',name='Capas del mapa').get_by_role('button',name='3D',exact=True).click(); pg.wait_for_timeout(1500)
+    check('3D: capa de edificios encendida y mapa inclinado', pg.evaluate("window.__romaMap.getLayer('buildings-3d')&&window.__romaMap.getLayoutProperty('buildings-3d','visibility')")=='visible' and pg.evaluate("window.__romaMap.getPitch()")>40)
+    pg.screenshot(path='/tmp/map-3d.png')
+    pg.get_by_role('group',name='Capas del mapa').get_by_role('button',name='3D',exact=True).click(); pg.wait_for_timeout(1200)
+    check('3D: al apagarlo vuelve a plano', pg.evaluate("window.__romaMap.getLayoutProperty('buildings-3d','visibility')")=='none' and pg.evaluate("window.__romaMap.getPitch()")<5)
+    # Metro
+    pg.get_by_role('group',name='Capas del mapa').get_by_role('button',name=re.compile('Metro')).click(); pg.wait_for_timeout(1500)
+    ml=pg.evaluate("window.__romaMap.getSource('metro-lines').serialize().data.features.length"); ms=pg.evaluate("window.__romaMap.getSource('metro-stations').serialize().data.features.length")
+    check(f'metro: líneas A y B y sus estaciones en el mapa ({ml} líneas, {ms} estaciones)', ml==2 and ms==4)
+    check('metro: capas visibles', pg.evaluate("['metro-line','metro-station','metro-name'].every(i=>!!window.__romaMap.getLayer(i))"))
+    pg.screenshot(path='/tmp/map-metro.png')
+    pg.get_by_role('group',name='Capas del mapa').get_by_role('button',name=re.compile('Metro')).click(); pg.wait_for_timeout(500)
+    check('metro: al apagarlo se oculta', pg.evaluate("window.__romaMap.getSource('metro-lines').serialize().data.features.length")==0)
     # Toque romántico: al llegar a una parada de hoy sale solo «Habéis llegado» con corazones
     tgt=pg.evaluate("(()=>{const f=window.__romaMap.querySourceFeatures('pins').filter(f=>f.properties.kind==='stop'&&f.properties.status==='todo')[0]||window.__romaMap.querySourceFeatures('pins').filter(f=>f.properties.kind==='stop')[0];return {lng:f.geometry.coordinates[0],lat:f.geometry.coordinates[1],id:f.properties.id,short:f.properties.short}})()")
     ctx.set_geolocation({'latitude':tgt['lat'],'longitude':tgt['lng']}); pg.wait_for_timeout(2200)
@@ -127,6 +179,15 @@ with sync_playwright() as p:
     pg.get_by_role('button',name='Ruta a pie',exact=True).click(); pg.wait_for_timeout(1200)
     check('ruta: muestra minutos y distancia a pie', pg.get_by_text('15 min').count()>0 and pg.get_by_text(re.compile('1[,.]2 km')).count()>0)
     check('ruta: se dibuja en el mapa', pg.evaluate("window.__romaMap.querySourceFeatures('route').length")>0)
+    check('ruta: dos opciones (recomendada y alternativa) con tiempo y distancia', pg.locator('.altchip').count()==2 and 'Recomendada' in pg.locator('.altchip').first.inner_text() and pg.locator('.altchip').nth(1).get_by_text('Alternativa 1').count()==1)
+    check('ruta: la alternativa se ve en gris sobre el mapa', pg.evaluate("window.__romaMap.getSource('alts').serialize().data.features.length")==1)
+    pg.locator('.altchip').nth(1).click(); pg.wait_for_timeout(600)
+    c1=pg.evaluate("window.__romaMap.getSource('route').serialize().data.geometry.coordinates[1][0]")
+    check('ruta: elegir la alternativa la dibuja como principal', abs(c1-12.4790)<1e-6 and pg.locator('.altchip').nth(1).get_attribute('aria-pressed')=='true' and pg.get_by_text('1,5 km').count()>0)
+    pg.locator('.altchip').first.click(); pg.wait_for_timeout(500)
+    try: pg.wait_for_selector('.elev',timeout=5000)
+    except Exception: pass
+    check('ruta: desnivel (sube/baja) con perfil dibujado', pg.locator('.elev').count()==1 and re.search(r'↑ \d+ m · ↓ \d+ m|Ruta llana', pg.locator('.elev').inner_text()) is not None and pg.locator('.elev polyline').count()==1)
     pg.screenshot(path='/tmp/map2.png')
     check('ruta: indicaciones en español', pg.get_by_text(re.compile('Ver las 3 indicaciones')).count()>0)
     pg.get_by_text(re.compile('Ver las 3 indicaciones')).click()
@@ -177,12 +238,23 @@ with sync_playwright() as p:
     pg.get_by_role('button',name='Ruta a pie',exact=True).click(); pg.wait_for_timeout(1500)
     check('sin conexión: calcula la ruta a pie con las calles guardadas', pg.get_by_text('sin conexión').count()>0 and pg.evaluate("window.__romaMap.querySourceFeatures('route').length")>0)
     pg.screenshot(path='/tmp/map-offline.png')
+    check('sin conexión: el desnivel sale de la malla de altitudes guardada', pg.locator('.elev').count()==1)
     pg.get_by_role('button',name='Quitar ruta').first.click(); pg.wait_for_timeout(300)
     ctx.set_geolocation({'latitude':41.9120,'longitude':12.4900})
     pg.evaluate("(()=>{const m=window.__romaMap;m.jumpTo({center:[12.4906,41.9064],zoom:17})})()"); pg.wait_for_timeout(800)
     box=pg.locator('.romamap').bounding_box()
     pg.mouse.click(box['x']+box['width']/2,box['y']+box['height']/2,button='right'); pg.wait_for_timeout(1200)
     check('sin conexión: pulsación larga dice qué calle es', pg.get_by_text(re.compile('Via (Est|Norte) \\d+')).count()>0)
+    pg.get_by_role('group',name='Capas del mapa').get_by_role('button',name=re.compile('Metro')).click(); pg.wait_for_timeout(1200)
+    check('sin conexión: el metro se ve con lo guardado', pg.evaluate("window.__romaMap.getSource('metro-lines').serialize().data.features.length")==2)
+    pg.get_by_role('button',name='Todos',exact=True).click(); pg.wait_for_timeout(300)
+    pg.get_by_role('button',name=re.compile('^II · Sáb')).click(); pg.wait_for_timeout(800)
+    got=open_stop('^stop:(colosseo|foro-romano|palatino|pantheon|trevi|navona|piazza-spagna)$')
+    check('sin conexión: la ficha conserva la foto y el resumen', got and pg.locator('.stopsheet .wikirow img').count()==1)
+    check('sin conexión: la estrella sigue guardada', pg.locator('.stopsheet').get_by_role('button',name=re.compile('Guardado')).count()==1)
+    pg.get_by_role('button',name='Cerrar la ficha').click(); pg.wait_for_timeout(300)
+    pg.get_by_role('button',name='Quitar',exact=True).click(); pg.wait_for_timeout(500)
+    check('estrella: «Quitar» la saca de la lista y del mapa', pg.locator('#saved-title ~ article').count()==0 and pg.evaluate("window.__romaMap.querySourceFeatures('pins').filter(f=>f.properties.kind==='saved').length")==0)
     check('descarga: sin errores de página', not errs)
     if errs: print(errs[:3])
     b.close()
