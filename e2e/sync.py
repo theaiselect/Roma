@@ -15,10 +15,10 @@ def phone(b, who):
     ctx = b.new_context(viewport={'width': 400, 'height': 860}, is_mobile=True, has_touch=True, locale='es-ES', timezone_id='Europe/Madrid')
     pg = ctx.new_page()
     pg.goto(f'{BASE}/?now={NOW}')
-    pg.get_by_role('button', name=who).click()
     pg.get_by_placeholder(re.compile('aaaa')).fill('testtest')
     pg.get_by_role('button', name='Continuar').click()
     pg.get_by_role('button', name='Ya está, seguir').click()
+    pg.get_by_role('button', name=who).click()
     pg.get_by_role('button', name='Entrar igualmente').click()
     return ctx, pg
 

@@ -19,8 +19,8 @@ def phone(b,who,now=NOW):
     pg=ctx.new_page(); pg.on('dialog',lambda d:d.accept())
     errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
     pg.goto(f'{BASE}/?now={now}')
-    pg.get_by_role('button',name=who).click(); pg.get_by_placeholder(re.compile('aaaa')).fill('testtest')
-    pg.get_by_role('button',name='Continuar').click(); pg.get_by_role('button',name='Ya está, seguir').click(); pg.get_by_role('button',name='Entrar igualmente').click()
+    pg.get_by_placeholder(re.compile('aaaa')).fill('testtest'); pg.get_by_role('button',name='Continuar').click()
+    pg.get_by_role('button',name='Ya está, seguir').click(); pg.get_by_role('button',name=who).click(); pg.get_by_role('button',name='Entrar igualmente').click()
     pg.wait_for_timeout(300)
     return ctx,pg,errs
 def sync(pg):

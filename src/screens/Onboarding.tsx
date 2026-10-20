@@ -28,32 +28,66 @@ export async function offlineReady(): Promise<boolean> {
   return false;
 }
 
-export function Onboarding() {
+/** ¿Quedan pasos antes de entrar? Contraseña → instalar (solo en el navegador) → quién eres → descarga. */
+function stepAfter(from: Step | null): Step {
   const s = getSettings();
-  const [step, setStep] = useState<Step>(s.profile ? 'code' : 'profile');
-  const [code, setCode] = useState(s.tripCode ?? '');
+  if (from === null && !s.tripCode) return 'code';
+  if ((from === null || from === 'code') && !isStandalone()) return 'install';
+  if (!s.profile) return 'profile';
+  return 'download';
+}
+
+type CodeCheck = 'ok' | 'wrong' | 'wait' | 'unknown';
+
+/** Comprueba la contraseña con el servidor. Sin red o con el servidor a medias se deja pasar: se puede revisar en Ajustes. */
+async function checkCode(code: string): Promise<CodeCheck> {
+  try {
+    const res = await fetch(`/api/sync?since=${Date.now()}`, { cache: 'no-store', headers: { 'x-trip-code': code } });
+    if (res.status === 401) return 'wrong';
+    if (res.status === 429) return 'wait';
+    return res.ok ? 'ok' : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+export function Onboarding() {
+  const [step, setStep] = useState<Step>(() => stepAfter(null));
+  const [code, setCode] = useState('');
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (e: Event) => {
+    e.preventDefault();
+    const c = code.trim();
+    if (c.length < 6 || checking) return;
+    setChecking(true);
+    setError(null);
+    const r = await checkCode(c);
+    setChecking(false);
+    if (r === 'wrong') { setError('Esa contraseña no es. Prueba otra vez.'); return; }
+    if (r === 'wait') { setError('Demasiados intentos. Espera unos minutos y vuelve a probar.'); return; }
+    updateSettings({ tripCode: c });
+    setStep(stepAfter('code'));
+  };
 
   return (
     <main class="content stack-lg" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
       <Logo hero />
-      {step === 'profile' && <ProfileStep onPick={(who) => { updateSettings({ profile: who }); setStep('code'); }} />}
       {step === 'code' && (
-        <section class="card stack">
-          <h2>Código del viaje</h2>
-          <p>Es la contraseña que solo sabéis los dos. Sirve para que vuestros gastos, diario y fotos se compartan entre los dos móviles y nadie más pueda verlos.</p>
-          <p class="small"><b>Pista:</b> nuestra fecha. Día, mes y año (dd/mm/aaaa); vale con o sin barras.</p>
+        <form class="card stack" onSubmit={(e) => void submit(e)}>
+          <h2>Contraseña</h2>
           <label class="field">
-            Código
-            <input type="password" autoComplete="off" value={code} onInput={(e) => setCode((e.target as HTMLInputElement).value)} placeholder="dd/mm/aaaa" />
+            <span class="sr-only">Contraseña del viaje</span>
+            <input type="password" autoComplete="off" autoCapitalize="off" autoFocus value={code} aria-label="Contraseña del viaje"
+              onInput={(e) => { setCode((e.target as HTMLInputElement).value); setError(null); }} placeholder="dd/mm/aaaa" />
           </label>
-          <button type="button" class="btn primary block" disabled={code.trim().length < 6}
-            onClick={() => { updateSettings({ tripCode: code.trim() }); setStep(isStandalone() ? 'download' : 'install'); }}>
-            Continuar
-          </button>
-          <button type="button" class="btn ghost block" onClick={() => setStep(isStandalone() ? 'download' : 'install')}>Lo pondré luego en Ajustes</button>
-        </section>
+          {error && <p class="alert danger" role="alert">{error}</p>}
+          <button type="submit" class="btn primary block" disabled={code.trim().length < 6 || checking}>{checking ? 'Comprobando…' : 'Continuar'}</button>
+        </form>
       )}
-      {step === 'install' && <InstallStep onNext={() => setStep('download')} />}
+      {step === 'install' && <InstallStep onNext={() => setStep(stepAfter('install'))} />}
+      {step === 'profile' && <ProfileStep onPick={(who) => { updateSettings({ profile: who }); setStep('download'); }} />}
       {step === 'download' && <DownloadStep />}
     </main>
   );
@@ -63,7 +97,6 @@ function ProfileStep({ onPick }: { onPick: (w: Who) => void }) {
   return (
     <section class="card stack">
       <h2>¿Quién eres?</h2>
-      <p class="muted">Cada móvil es de uno. Se puede cambiar en Ajustes.</p>
       {(Object.keys(travellers) as Who[]).map((w) => (
         <button type="button" key={w} class="btn block" style={{ minHeight: '3.5rem', fontSize: '1.15rem' }} onClick={() => onPick(w)}>
           {travellers[w].name}
@@ -111,7 +144,7 @@ function InstallStep({ onNext }: { onNext: () => void }) {
         <ol class="stack" style={{ paddingLeft: '1.2rem', margin: 0 }}>
           <li>Pulsa <b>Compartir</b> (el cuadrado con la flecha) en Safari.</li>
           <li>Elige <b>Añadir a pantalla de inicio</b> y luego <b>Añadir</b>.</li>
-          <li>Abre <b>Roma</b> siempre desde ese icono: Safari y la app instalada no comparten datos.</li>
+          <li>Abre <b>Roma</b> siempre desde ese icono. La primera vez te pedirá la contraseña otra vez: Safari y la app instalada no comparten datos.</li>
         </ol>
       ) : (
         <>

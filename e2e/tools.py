@@ -13,8 +13,8 @@ with sync_playwright() as p:
     pg.on('pageerror',lambda e:errs.append(str(e)))
     pg.on('dialog',lambda d:d.accept())
     pg.goto(f'{BASE}/?now={NOW}')
-    pg.get_by_role('button',name='Jesús').click(); pg.get_by_placeholder(re.compile('aaaa')).fill('testtest')
-    pg.get_by_role('button',name='Continuar').click(); pg.get_by_role('button',name='Ya está, seguir').click(); pg.get_by_role('button',name='Entrar igualmente').click()
+    pg.get_by_placeholder(re.compile('aaaa')).fill('testtest'); pg.get_by_role('button',name='Continuar').click()
+    pg.get_by_role('button',name='Ya está, seguir').click(); pg.get_by_role('button',name='Jesús').click(); pg.get_by_role('button',name='Entrar igualmente').click()
     go=lambda r:(pg.goto(f'{BASE}{r}?now={NOW}'),pg.wait_for_timeout(500))
     # Más: buscador
     go('/mas'); pg.get_by_label('Buscar una herramienta').fill('gast'); pg.wait_for_timeout(200)

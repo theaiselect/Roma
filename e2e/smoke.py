@@ -13,10 +13,10 @@ ROUTES = ['/', '/plan/2', '/mapa', '/nosotros/diario', '/nosotros/fotos', '/noso
 
 def onboard(page, who):
     page.goto(f'{BASE}/?now={NOW}')
-    page.get_by_role('button', name=who).click()
     page.get_by_placeholder(re.compile('aaaa')).fill('testtest')
     page.get_by_role('button', name='Continuar').click()
     page.get_by_role('button', name='Ya está, seguir').click()
+    page.get_by_role('button', name=who).click()
     page.get_by_role('button', name='Entrar igualmente').click()
 
 with sync_playwright() as p:

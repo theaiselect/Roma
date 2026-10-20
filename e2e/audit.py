@@ -32,8 +32,8 @@ CASES=[
 ]
 def onboard(pg,now):
     pg.goto(f'{BASE}/?now={now}')
-    pg.get_by_role('button',name='Jesús').click(); pg.get_by_placeholder(re.compile('aaaa')).fill('testtest')
-    pg.get_by_role('button',name='Continuar').click(); pg.get_by_role('button',name='Ya está, seguir').click(); pg.get_by_role('button',name='Entrar igualmente').click()
+    pg.get_by_placeholder(re.compile('aaaa')).fill('testtest'); pg.get_by_role('button',name='Continuar').click()
+    pg.get_by_role('button',name='Ya está, seguir').click(); pg.get_by_role('button',name='Jesús').click(); pg.get_by_role('button',name='Entrar igualmente').click()
 with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/opt/pw-browsers/chromium',args=['--no-sandbox'])
     ctx=b.new_context(viewport={'width':412,'height':900},is_mobile=True,locale='es-ES',timezone_id='Europe/Madrid'); pg=ctx.new_page()

@@ -77,8 +77,8 @@ with sync_playwright() as p:
     pg=ctx.new_page(); errs=[]
     pg.on('pageerror',lambda e:errs.append(str(e))); pg.on('console',lambda m:print('CONSOLE',m.text[:300]) if 'offline' in m.text else None)
     pg.goto(f'{BASE}/?now={NOW}')
-    pg.get_by_role('button',name='Jesús').click(); pg.get_by_placeholder(re.compile('aaaa')).fill('testtest')
-    pg.get_by_role('button',name='Continuar').click(); pg.get_by_role('button',name='Ya está, seguir').click(); pg.get_by_role('button',name='Entrar igualmente').click()
+    pg.get_by_placeholder(re.compile('aaaa')).fill('testtest'); pg.get_by_role('button',name='Continuar').click()
+    pg.get_by_role('button',name='Ya está, seguir').click(); pg.get_by_role('button',name='Jesús').click(); pg.get_by_role('button',name='Entrar igualmente').click()
     pg.goto(f'{BASE}/mapa?now={NOW}&e2e=1&autooffline=1')
     pg.wait_for_selector('.romamap canvas',timeout=20000); pg.wait_for_function("window.__romaMap && window.__romaMap.getSource('pins')",timeout=20000)
     pg.wait_for_timeout(1500)
