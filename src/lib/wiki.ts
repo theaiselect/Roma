@@ -13,7 +13,7 @@ export const WIKI_HINT: Record<string, RegExp> = {
   'colosseo': /^coliseo( de roma)?$|anfiteatro flavio/,
   'palatino': /^(monte )?palatino$|colina palatina/,
   'foro-romano': /^foro romano/,
-  'ghetto': /gueto (judio )?de roma|ghetto (ebraico )?di roma/,
+  'ghetto': /gueto (judio )?de roma|ghetto (ebraico )?di roma|portico de octavia/,
   'teatro-marcello': /teatro de marcelo|teatro di marcello/,
   'bocca-verita': /boca de la verdad|bocca della verita/,
   'circo-massimo': /circo maximo|circo massimo/,
@@ -29,7 +29,7 @@ export const WIKI_HINT: Record<string, RegExp> = {
   'navona': /plaza navona|piazza navona/,
   'pantheon': /^panteon( de agripa| de roma| \(roma\))?$/,
   'vittoriano': /monumento a victor manuel|vittoriano|altar de la patria/,
-  'campidoglio': /plaza del (campidoglio|capitolio)|piazza del campidoglio|^capitolio|monte capitolino/,
+  'campidoglio': /plaza del (campidoglio|capitolio)|piazza del campidoglio|^capitolio|monte capitolino|colina capitolina/,
   'termini': /estacion de roma termini|roma termini/,
   'musei-capitolini': /museos capitolinos/,
   'san-luigi': /luigi dei francesi|san luis de los franceses/,
@@ -49,7 +49,7 @@ export function pickWiki(pages: WikiPage[], hint: RegExp): WikiPage | null {
 }
 
 export function wikiUrl(lat: number, lng: number): string {
-  return `https://es.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${lat}%7C${lng}&ggsradius=600&ggslimit=30&prop=pageimages%7Cextracts&piprop=thumbnail&pithumbsize=640&exintro=1&explaintext=1&exsentences=3&exlimit=30&format=json&formatversion=2&origin=*`;
+  return `https://es.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${lat}%7C${lng}&ggsradius=600&ggslimit=20&prop=pageimages%7Cextracts&piprop=thumbnail&pithumbsize=640&exintro=1&explaintext=1&exsentences=3&exlimit=20&format=json&formatversion=2&origin=*`;
 }
 
 export const articleUrl = (title: string): string => `https://es.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`;

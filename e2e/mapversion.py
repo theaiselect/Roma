@@ -24,7 +24,7 @@ def mock(route):
 with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/opt/pw-browsers/chromium',args=['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     ctx=b.new_context(viewport={'width':412,'height':900},is_mobile=True,locale='es-ES',timezone_id='Europe/Madrid')
-    for host in ['tiles.openfreemap.org','photon.komoot.io','routing.openstreetmap.de','overpass-api.de','api.open-meteo.com','es.wikipedia.org','upload.wikimedia.org','overpass.private.coffee','overpass.kumi.systems']:
+    for host in ['tiles.openfreemap.org','photon.komoot.io','routing.openstreetmap.de','overpass-api.de','api.open-meteo.com','es.wikipedia.org','upload.wikimedia.org','overpass.openstreetmap.fr','overpass.private.coffee','overpass.kumi.systems']:
         ctx.route(f'**://{host}/**',mock)
     pg=ctx.new_page()
     pg.goto(f'{BASE}/?now={NOW}')

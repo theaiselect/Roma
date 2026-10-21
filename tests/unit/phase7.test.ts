@@ -126,6 +126,14 @@ describe('metro', () => {
     expect(m.stations[0]!.lines).toEqual(['A']);
     expect(m.stations[1]!.lines).toEqual(['B']);
   });
+  it('vías que salen de la zona (puntos a null con «out geom(bbox)») se parten sin romperse', () => {
+    const g = (lat: number) => ({ lat, lon: 12.5 });
+    const m = parseMetro({ elements: [
+      { type: 'relation', id: 1, tags: { ref: 'C' }, members: [{ type: 'way', ref: 30, geometry: [g(41.90), g(41.901), null, null, g(41.903), g(41.904), g(41.905), null, g(41.907)] }] },
+      { type: 'node', id: 2, lat: 41.9, lon: 12.5, tags: { name: 'San Giovanni', railway: 'station' } },
+    ] })!;
+    expect(m.lines[0]!.segments).toEqual([[[12.5, 41.9], [12.5, 41.901]], [[12.5, 41.903], [12.5, 41.904], [12.5, 41.905]]]);
+  });
   it('sin datos útiles devuelve null', () => { expect(parseMetro({ elements: [] })).toBeNull(); expect(parseMetro(null)).toBeNull(); });
   it('estación más cercana y texto', () => {
     const m = parseMetro(sample)!;
@@ -166,6 +174,10 @@ describe('fotos de los sitios (Wikipedia)', () => {
   it('URLs bien formadas', () => {
     expect(wikiUrl(41.89, 12.49)).toContain('ggscoord=41.89%7C12.49');
     expect(wikiUrl(41.89, 12.49)).toContain('origin=*');
+    // Wikipedia da como mucho 20 resúmenes por petición: pedir más artículos deja alguno sin texto.
+    const u = new URL(wikiUrl(41.89, 12.49));
+    expect(Number(u.searchParams.get('exlimit'))).toBeLessThanOrEqual(20);
+    expect(Number(u.searchParams.get('ggslimit'))).toBeLessThanOrEqual(Number(u.searchParams.get('exlimit')));
     expect(articleUrl('Plaza de España (Roma)')).toBe('https://es.wikipedia.org/wiki/Plaza_de_Espa%C3%B1a_(Roma)');
   });
 });
@@ -178,5 +190,9 @@ describe('pistas de Wikipedia afinadas', () => {
     expect(WIKI_HINT.trevi!.test(fold('Fontana de Trevi'))).toBe(true);
     expect(WIKI_HINT.colosseo!.test(fold('Colosseo (metro de Roma)'))).toBe(false);
     expect(WIKI_HINT.termini!.test(fold('Termini (Sicilia)'))).toBe(false);
+    // Títulos reales de es.wikipedia junto a esos sitios (comprobado el 21 oct 2026)
+    expect(WIKI_HINT.campidoglio!.test(fold('Colina Capitolina'))).toBe(true);
+    expect(WIKI_HINT.ghetto!.test(fold('Pórtico de Octavia'))).toBe(true);
+    expect(WIKI_HINT.ghetto!.test(fold('Teatro de Marcelo'))).toBe(false);
   });
 });

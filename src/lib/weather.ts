@@ -6,7 +6,7 @@ export interface DayForecast { date: string; code: number; tmax: number; tmin: n
 export interface Forecast { fetchedAt: number; days: DayForecast[]; normals?: boolean }
 
 const KEY = 'roma-weather';
-const URL_ = `https://api.open-meteo.com/v1/forecast?latitude=${ROME.lat}&longitude=${ROME.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FRome&forecast_days=16`;
+export const FORECAST_URL = `https://api.open-meteo.com/v1/forecast?latitude=${ROME.lat}&longitude=${ROME.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FRome&forecast_days=16`;
 
 export function parseForecast(json: unknown, now = Date.now()): Forecast | null {
   const d = (json as { daily?: Record<string, unknown[]> })?.daily;
@@ -46,7 +46,7 @@ export const forecastCached = cached;
 /** Descarga la previsión y la guarda. null si no hay red. */
 export async function refreshForecast(): Promise<Forecast | null> {
   try {
-    const r = await fetch(URL_);
+    const r = await fetch(FORECAST_URL);
     const parsed = r.ok ? parseForecast(await r.json()) : null;
     if (parsed) { try { localStorage.setItem(KEY, JSON.stringify(parsed)); } catch { /* ignore */ } }
     return parsed;

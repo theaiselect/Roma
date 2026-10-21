@@ -3,7 +3,7 @@
 //  · Buscador: Photon (komoot).  · Fuentes, baños, farmacias, cafés y heladerías: Overpass.
 // Todo falla con elegancia: sin red, la app sigue con lo guardado y con los enlaces a Google/Apple Maps.
 import { getMeta, setMeta } from '@/lib/db';
-import { offlineRoute, reverseOffline, searchOffline } from '@/lib/offline-data'; // solo se usan al llamar (hay un ciclo de módulos inofensivo)
+import { offlineRoute, overpass, reverseOffline, searchOffline } from '@/lib/offline-data'; // solo se usan al llamar (hay un ciclo de módulos inofensivo)
 import { distanceM, type LatLng } from '@/lib/geo';
 import { parseSteps, type OsrmStep, type Step } from '@/lib/nav';
 
@@ -120,7 +120,7 @@ export async function searchPlaces(q: string): Promise<Found[] | null> {
 export async function reverseGeocode(p: LatLng): Promise<Found | null> {
   const offline = async () => reverseOffline(p).catch(() => null);
   if (!navigator.onLine) return offline();
-  const r = await getJson<PhotonResponse>(`https://photon.komoot.io/api/reverse?lat=${p.lat}&lon=${p.lng}&limit=1`, undefined, 6000);
+  const r = await getJson<PhotonResponse>(`https://photon.komoot.io/reverse?lat=${p.lat}&lon=${p.lng}&limit=1`, undefined, 6000);
   const f = r ? parsePhoton(r)[0] : undefined;
   return f ? { ...f, lat: p.lat, lng: p.lng } : offline();
 }
@@ -176,11 +176,8 @@ export async function cachedPois(): Promise<PoiCache | undefined> {
 export async function refreshPois(force = false, now = Date.now()): Promise<PoiCache | undefined> {
   const cur = await cachedPois();
   if (cur && !force && now - cur.at < POI_MAX_AGE) return cur;
-  const r = await getJson<{ elements?: OverpassElement[] }>('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(overpassQuery())}`,
-  }, 45_000);
+  // Con los mismos espejos que el resto de descargas: el servidor principal a veces está saturado.
+  const r = await overpass<{ elements?: OverpassElement[] }>(overpassQuery(), 45_000).catch(() => null);
   const pois = parseOverpass(r);
   if (!pois.length) return cur;
   const next = { at: now, pois };
