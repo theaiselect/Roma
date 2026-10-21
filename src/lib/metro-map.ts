@@ -19,7 +19,7 @@ export const metroQuery = (): string => {
   return `[out:json][timeout:60];rel["route"="subway"](${bb});out geom(${bb});(nwr["railway"="station"]["station"="subway"](${bb});nwr["railway"="station"]["subway"="yes"](${bb}););out center;`;
 };
 
-interface Member { type: string; ref: number; role?: string; geometry?: { lat: number; lon: number }[] }
+interface Member { type: string; ref: number; role?: string; geometry?: ({ lat: number; lon: number } | null)[] }
 interface El { type: string; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string>; members?: Member[] }
 
 /** Distancia (m) de un punto al tramo más cercano de unas líneas. */
@@ -55,7 +55,13 @@ export function parseMetro(r: { elements?: El[] } | null, at = Date.now()): Metr
       const k = `${ref}:${m.ref}`;
       if (seenWays.has(k)) continue; // cada sentido repite las mismas vías
       seenWays.add(k);
-      line.segments.push(m.geometry.map((g) => [Math.round(g.lon * 1e5) / 1e5, Math.round(g.lat * 1e5) / 1e5] as [number, number]));
+      // `out geom(bbox)` deja a null los puntos fuera de la zona: la vía se parte en los trozos que quedan dentro.
+      let run: [number, number][] = [];
+      for (const g of [...m.geometry, null]) {
+        if (g) { run.push([Math.round(g.lon * 1e5) / 1e5, Math.round(g.lat * 1e5) / 1e5]); continue; }
+        if (run.length >= 2) line.segments.push(run);
+        run = [];
+      }
     }
     lines.set(ref, line);
   }

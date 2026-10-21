@@ -101,7 +101,7 @@ describe('servicios reales', () => {
     const rev = await reverseGeocode(TREVI);
     note('Photon', 'qué hay en la Fontana di Trevi (reverse)', !!rev, rev ? `${rev.name} (${rev.detail})` : 'nada');
     for (const lim of [1, 5]) {
-      const rr = await raw(`https://photon.komoot.io/api/reverse?lat=${TREVI.lat}&lon=${TREVI.lng}&limit=${lim}`);
+      const rr = await raw(`https://photon.komoot.io/reverse?lat=${TREVI.lat}&lon=${TREVI.lng}&limit=${lim}`);
       const props = (json<{ features?: { properties: Record<string, unknown> }[] }>(rr.body)?.features ?? []).map((f) => JSON.stringify(f.properties).slice(0, 160));
       note('Photon', `reverse en bruto (limit=${lim}), diagnóstico`, true, `HTTP ${rr.status}: ${props.join(' / ') || rr.body.toString('utf8').slice(0, 160)}`);
     }
