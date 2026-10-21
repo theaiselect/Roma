@@ -111,15 +111,19 @@ describe('servicios reales', () => {
   });
 
   it('Overpass: espejos, fuentes/baños/farmacias, metro, sitios y calles', { timeout: 1_200_000 }, async () => {
-    const CANDIDATES = [...OVERPASS_MIRRORS, 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.openstreetmap.fr/api/interpreter', 'https://overpass.osm.jp/api/interpreter'];
+    let mirrorsOk = 0;
+    const CANDIDATES = [...new Set([...OVERPASS_MIRRORS, 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.osm.jp/api/interpreter'])];
     for (const m of CANDIDATES) for (let attempt = 1; attempt <= 3; attempt++) {
       if (attempt > 1) await sleep(15_000);
       const r = await raw(m, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: `data=${encodeURIComponent('[out:json][timeout:25];node["amenity"="drinking_water"](41.895,12.47,41.90,12.48);out 5;')}` }, 90_000);
       const els = json<{ elements?: unknown[] }>(r.body)?.elements;
       if (!els && attempt < 3) { console.log(`… ${new URL(m).host} intento ${attempt}: HTTP ${r.status}`); continue; }
-      note('Overpass', `espejo ${new URL(m).host} (intento ${attempt})`, r.status === 200 && !!els, `HTTP ${r.status}, ${els?.length ?? '—'} elementos, CORS ${r.cors}, ${r.ms} ms${r.status !== 200 ? `, «${r.body.toString('utf8').slice(0, 120).replace(/\s+/g, ' ')}»` : ''}`);
+      if (els && OVERPASS_MIRRORS.includes(m)) mirrorsOk++;
+      // Un espejo caído no rompe nada (la app prueba el siguiente): solo es aviso. Falla si no responde ninguno.
+      note('Overpass', `espejo ${new URL(m).host} (intento ${attempt})${OVERPASS_MIRRORS.includes(m) ? '' : ' — no lo usa la app'}`, true, `${els ? '✓' : '✗'} HTTP ${r.status}, ${els?.length ?? '—'} elementos, CORS ${r.cors}, ${r.ms} ms${r.status !== 200 ? `, «${r.body.toString('utf8').slice(0, 120).replace(/\s+/g, ' ')}»` : ''}`);
       break;
     }
+    note('Overpass', 'algún espejo de la app responde', mirrorsOk > 0, `${mirrorsOk} espejos respondieron`);
 
     const pois = await refreshPois(true);
     const byKind = (pois?.pois ?? []).reduce<Record<string, number>>((a, p) => ({ ...a, [p.kind]: (a[p.kind] ?? 0) + 1 }), {});
