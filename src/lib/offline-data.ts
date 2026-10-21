@@ -12,11 +12,11 @@ import { forecastCached, refreshForecast } from '@/lib/weather';
 import { downloadWiki, wikiStatus } from '@/lib/wiki';
 
 // ── Overpass con espejos ────────────────────────────────────────
-const MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+export const OVERPASS_MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 
 export async function overpass<T>(query: string, timeoutMs = 90_000): Promise<T> {
   let last: unknown;
-  for (const url of MIRRORS) {
+  for (const url of OVERPASS_MIRRORS) {
     const ctl = new AbortController();
     const t = window.setTimeout(() => ctl.abort(), timeoutMs);
     try {

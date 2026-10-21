@@ -1,0 +1,17 @@
+# Comprueba con internet real los servicios del mapa (OpenFreeMap, OSRM, Photon, Overpass, Wikipedia, Open-Meteo).
+# El informe sale en el resumen del trabajo. Se lanza a mano o al cambiar la propia comprobación.
+name: Servicios del mapa
+on:
+  workflow_dispatch:
+  push:
+    paths: ['tests/live/**', 'vitest.live.config.ts', '.github/workflows/servicios.yml']
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx vitest run --config vitest.live.config.ts

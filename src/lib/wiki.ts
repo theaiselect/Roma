@@ -49,7 +49,7 @@ export function pickWiki(pages: WikiPage[], hint: RegExp): WikiPage | null {
 }
 
 export function wikiUrl(lat: number, lng: number): string {
-  return `https://es.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${lat}%7C${lng}&ggsradius=600&ggslimit=30&prop=pageimages%7Cextracts&piprop=thumbnail&pithumbsize=640&exintro=1&explaintext=1&exsentences=3&exlimit=30&format=json&formatversion=2&origin=*`;
+  return `https://es.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${lat}%7C${lng}&ggsradius=600&ggslimit=20&prop=pageimages%7Cextracts&piprop=thumbnail&pithumbsize=640&exintro=1&explaintext=1&exsentences=3&exlimit=20&format=json&formatversion=2&origin=*`;
 }
 
 export const articleUrl = (title: string): string => `https://es.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`;

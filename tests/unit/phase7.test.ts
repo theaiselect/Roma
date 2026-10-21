@@ -166,6 +166,10 @@ describe('fotos de los sitios (Wikipedia)', () => {
   it('URLs bien formadas', () => {
     expect(wikiUrl(41.89, 12.49)).toContain('ggscoord=41.89%7C12.49');
     expect(wikiUrl(41.89, 12.49)).toContain('origin=*');
+    // Wikipedia da como mucho 20 resúmenes por petición: pedir más artículos deja alguno sin texto.
+    const u = new URL(wikiUrl(41.89, 12.49));
+    expect(Number(u.searchParams.get('exlimit'))).toBeLessThanOrEqual(20);
+    expect(Number(u.searchParams.get('ggslimit'))).toBeLessThanOrEqual(Number(u.searchParams.get('exlimit')));
     expect(articleUrl('Plaza de España (Roma)')).toBe('https://es.wikipedia.org/wiki/Plaza_de_Espa%C3%B1a_(Roma)');
   });
 });
