@@ -15,7 +15,7 @@ import { canShareFile, downloadFile, FileReady } from '@/components/FileShare';
 import { checkConnection, type ConnectionReport } from '@/lib/connection';
 import { useLocal } from '@/lib/local';
 import { useOnline } from '@/lib/online';
-import { checkForUpdate, type UpdateResult } from '@/lib/update';
+import { applyUpdate, checkForUpdate, type UpdateResult } from '@/lib/update';
 
 declare const __APP_VERSION__: string;
 
@@ -60,6 +60,17 @@ function Status() {
   );
 }
 
+const UPDATE_TEXT: Record<UpdateResult | 'downloading', string> = {
+  downloading: 'Hay una versión nueva y se está descargando. Puede tardar un poco con datos móviles.',
+  new: 'Hay una versión nueva lista: pulsa «Actualizar ahora». La app se recargará y no se pierde nada.',
+  latest: 'Ya tienes la última versión.',
+  slow: 'Hay una versión nueva, pero va lenta. Sigue descargándose: cuando termine saldrá abajo el aviso «Hay una versión nueva».',
+  failed: 'Hay una versión nueva, pero no se ha podido descargar entera. Vuelve a probar, mejor con wifi.',
+  offline: 'Sin conexión no se puede buscar. Prueba cuando tengas internet.',
+  unsupported: 'Este navegador no permite comprobarlo desde aquí.',
+  error: 'No se ha podido comprobar. ¿Hay conexión?',
+};
+
 /** Ajustes (F50): todo persiste al cerrar la app. */
 export function SettingsScreen() {
   const s = useSettings();
@@ -70,7 +81,7 @@ export function SettingsScreen() {
   const [syncing, setSyncing] = useState(false);
   const [testing, setTesting] = useState(false);
   const [report, setReport] = useState<ConnectionReport | null>(null);
-  const [upd, setUpd] = useState<UpdateResult | 'checking' | null>(null);
+  const [upd, setUpd] = useState<UpdateResult | 'checking' | 'downloading' | null>(null);
   const online = useOnline();
   const [preparing, setPreparing] = useState(false);
   const [backupFile, setBackupFile] = useState<File | null>(null);
@@ -92,7 +103,7 @@ export function SettingsScreen() {
   };
   const lookForUpdate = () => {
     setUpd('checking');
-    void checkForUpdate().then(setUpd);
+    void checkForUpdate({ onDownloading: () => setUpd('downloading') }).then(setUpd);
   };
   return (
     <div class="stack-lg">
@@ -133,11 +144,11 @@ export function SettingsScreen() {
         <h2>Estado</h2>
         <div id="instalar"><InstallCard /></div>
         <Status />
-        <button type="button" class="btn" disabled={upd === 'checking'} onClick={lookForUpdate}>{upd === 'checking' ? 'Buscando…' : 'Buscar versión nueva'}</button>
+        {upd === 'new'
+          ? <button type="button" class="btn primary" onClick={() => void applyUpdate().then((ok) => { if (!ok) setUpd('latest'); })}>Actualizar ahora</button>
+          : <button type="button" class="btn" disabled={upd === 'checking' || upd === 'downloading'} onClick={lookForUpdate}>{upd === 'checking' ? 'Buscando…' : upd === 'downloading' ? 'Descargando la versión nueva…' : 'Buscar versión nueva'}</button>}
         {upd && upd !== 'checking' && (
-          <p class="small" role="status">
-            {upd === 'new' ? 'Hay una versión nueva: pulsa «Actualizar» en el aviso de abajo.' : upd === 'latest' ? 'Ya tienes la última versión.' : upd === 'unsupported' ? 'Este navegador no permite comprobarlo desde aquí.' : 'No se ha podido comprobar. ¿Hay conexión?'}
-          </p>
+          <p class="small" role="status">{UPDATE_TEXT[upd]}</p>
         )}
       </section>
       <section class="card stack" id="copia">
