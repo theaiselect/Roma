@@ -10,6 +10,7 @@ import { usePresencePing } from '@/lib/presence';
 import { useSettings } from '@/lib/settings';
 import { useSyncStatus } from '@/lib/sync-status';
 import { requestSync } from '@/lib/sync';
+import { applyUpdate, watchForUpdates } from '@/lib/update';
 import { Onboarding } from '@/screens/Onboarding';
 import { Today } from '@/screens/Today';
 
@@ -95,7 +96,7 @@ function Shell({ needRefresh, updateServiceWorker }: { needRefresh: boolean; upd
       {needRefresh && (
         <div class="update" role="status">
           <span>Hay una versión nueva</span>
-          <button type="button" class="btn primary" onClick={() => void updateServiceWorker(true)}>Actualizar</button>
+          <button type="button" class="btn primary" onClick={() => void applyUpdate().then((ok) => { if (!ok) void updateServiceWorker(true); })}>Actualizar</button>
         </div>
       )}
     </div>
@@ -106,7 +107,8 @@ export function App() {
   const s = useSettings();
   // El service worker se registra desde la primera pantalla (también en el onboarding):
   // así la app se cachea para usarla sin conexión y Chrome puede ofrecer instalarla.
-  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW();
+  // La app instalada casi nunca se vuelve a abrir desde cero: al volver a ella se mira si hay versión nueva.
+  const { needRefresh: [needRefresh, setNeedRefresh], updateServiceWorker } = useRegisterSW({ onRegisteredSW: (_url, reg) => { if (reg) watchForUpdates(reg, () => setNeedRefresh(true)); } });
   return (
     <LocationProvider>
       {s.onboarded && s.profile ? <Shell needRefresh={needRefresh} updateServiceWorker={updateServiceWorker} /> : <Onboarding />}
