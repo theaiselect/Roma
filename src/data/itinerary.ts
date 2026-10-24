@@ -16,10 +16,8 @@ export const itinerary: Stop[] = [
   { id: 'd1-pincio', day: 1, start: '16:45', placeId: 'pincio', title: 'Mirador del Pincio' },
   { id: 'd1-popolo', day: 1, start: '17:30', placeId: 'piazza-popolo', title: 'Piazza del Popolo y Santa Maria del Popolo', note: 'Caravaggio' },
   { id: 'd1-spagna', day: 1, start: '18:30', placeId: 'piazza-spagna', title: 'Plaza de España y Via Condotti', note: 'No sentarse en la escalinata' },
-  { id: 'd1-roscioli', day: 1, start: '21:30', placeId: 'roscioli-salumeria', title: 'Cena en Roscioli Salumeria', ticketId: 'roscioli', note: 'La reserva online solo da 19:00, 21:30 o 21:45. Trevi queda a 15 min a pie', planB: [
-    { placeId: 'armando-pantheon', reason: 'Si no hay mesa' },
-  ] },
-  { id: 'd1-trevi', day: 1, start: '23:15', placeId: 'trevi', title: 'Fontana di Trevi', note: 'Gratis después de las 22:00 (2 € de 9 a 22; viernes desde 11:30)' },
+  { id: 'd1-armando', day: 1, start: '21:00', placeId: 'armando-pantheon', title: 'Cena en Armando al Pantheon', ticketId: 'armando', note: 'Roscioli estaba lleno. Trevi queda a 10 min a pie' },
+  { id: 'd1-trevi', day: 1, start: '22:45', placeId: 'trevi', title: 'Fontana di Trevi', note: 'Gratis después de las 22:00 (2 € de 9 a 22; viernes desde 11:30)' },
 
   // ── II · Sábado 31 de octubre ─────────────────────────────────
   { id: 'd2-regoli', day: 2, start: '07:15', placeId: 'regoli', title: 'Desayuno en Regoli', note: 'Pedir maritozzo. Efectivo en barra. Después, paseo por Via Merulana' },
@@ -63,15 +61,14 @@ export const itinerary: Stop[] = [
   { id: 'd3-back', day: 3, placeId: 'hotel-soha', title: 'Vuelta al hotel', note: 'El metro cierra a las 23:30 el domingo: tranvía 8, taxi o 35–40 min a pie' },
 
   // ── IV · Lunes 2 de noviembre ─────────────────────────────────
-  { id: 'd4-sciascia', day: 4, start: '07:00', placeId: 'sciascia', title: 'Desayuno en Sciascia Caffè 1919' },
-  { id: 'd4-cola', day: 4, start: '07:45', placeId: 'musei-vaticani', title: 'Cola de entrada a los Museos Vaticanos', note: 'Viale Vaticano; hombros y rodillas cubiertos' },
-  { id: 'd4-vaticani', day: 4, start: '08:00', placeId: 'musei-vaticani', title: 'Museos Vaticanos + Capilla Sixtina', ticketId: 'vaticani', note: '1 Intero + 1 Ridotto' },
-  { id: 'd4-sanpietro', day: 4, start: '12:00', placeId: 'san-pietro', title: 'Basílica de San Pedro', note: 'Gratis' },
-  { id: 'd4-cupola', day: 4, start: '13:00', placeId: 'cupola', title: 'Cúpula de San Pedro', note: 'Taquilla: 10 € escaleras / 15 € ascensor; 551 escalones' },
-  { id: 'd4-supplizio', day: 4, start: '14:15', placeId: 'supplizio', title: 'Supplì en Supplizio' },
-  { id: 'd4-roscioli', day: 4, start: '14:35', placeId: 'antico-forno-roscioli', title: 'Antico Forno Roscioli', note: 'Justo de tiempo: si vais tarde, seguir a Navona' },
-  { id: 'd4-navona', day: 4, start: '15:00', placeId: 'navona', title: 'Piazza Navona' },
-  { id: 'd4-teatro', day: 4, start: '15:10', placeId: 'gelateria-del-teatro', title: 'Helado en Gelateria del Teatro' },
+  { id: 'd4-sciascia', day: 4, start: '08:00', placeId: 'sciascia', title: 'Desayuno en Sciascia Caffè 1919' },
+  { id: 'd4-sanpietro', day: 4, start: '08:45', placeId: 'san-pietro', title: 'Plaza y Basílica de San Pedro', note: 'Gratis. Pronto hay menos cola en el control. Hombros y rodillas cubiertos. Los Museos Vaticanos y la Sixtina, solo por fuera (24 oct: agotados)' },
+  { id: 'd4-cupola', day: 4, start: '10:15', placeId: 'cupola', title: 'Cúpula de San Pedro', note: 'Taquilla: 10 € escaleras / 15 € ascensor; 551 escalones' },
+  { id: 'd4-paseo', day: 4, start: '11:45', title: "Paseo por el Borgo, Ponte Sant'Angelo y Via dei Coronari", note: 'Sin prisa: no hay hora fija hasta el Panteón' },
+  { id: 'd4-supplizio', day: 4, start: '12:45', placeId: 'supplizio', title: 'Supplì en Supplizio' },
+  { id: 'd4-roscioli', day: 4, start: '13:15', placeId: 'antico-forno-roscioli', title: 'Antico Forno Roscioli', note: "Campo de' Fiori queda al lado" },
+  { id: 'd4-navona', day: 4, start: '14:15', placeId: 'navona', title: 'Piazza Navona' },
+  { id: 'd4-teatro', day: 4, start: '14:45', placeId: 'gelateria-del-teatro', title: 'Helado en Gelateria del Teatro' },
   { id: 'd4-pantheon', day: 4, start: '15:35', placeId: 'pantheon', title: 'Panteón', ticketId: 'pantheon', note: 'Franja 15:00–16:00' },
   { id: 'd4-eustachio', day: 4, start: '16:05', placeId: 'sant-eustachio', title: "Café en Sant'Eustachio" },
   { id: 'd4-vittoriano', day: 4, start: '16:40', placeId: 'vittoriano', title: 'Terraza del Vittoriano', note: 'Reducida 5 €' },

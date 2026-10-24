@@ -39,9 +39,9 @@ with sync_playwright() as p:
     n0=j.get_by_role('button',name='Ya está hecho').count()
     j.get_by_role('button',name='Ya está hecho').first.click(); j.wait_for_timeout(500)
     check('reservas: «Ya está hecho» la pasa a Hechas', j.get_by_role('button',name='Ya está hecho').count()==n0-1)
-    j.get_by_label(re.compile('nota de la reserva vaticani')).fill('LOC123'); j.get_by_label(re.compile('nota de la reserva vaticani')).blur(); j.wait_for_timeout(500)
+    j.get_by_label(re.compile('nota de la reserva carbonara')).fill('LOC123'); j.get_by_label(re.compile('nota de la reserva carbonara')).blur(); j.wait_for_timeout(500)
     go(j,'/mas/reservas')
-    check('reservas: la nota se guarda', j.get_by_label(re.compile('nota de la reserva vaticani')).input_value()=='LOC123')
+    check('reservas: la nota se guarda', j.get_by_label(re.compile('nota de la reserva carbonara')).input_value()=='LOC123')
     pan=j.locator('article',has=j.get_by_role('heading',name='Panteón'))
     pan.locator('input[type=file]').set_input_files([PNG,PDF]); pan.get_by_role('button',name='entrada.pdf',exact=True).wait_for(timeout=10000); pan.get_by_role('button',name='entrada.png',exact=True).wait_for(timeout=10000); j.wait_for_timeout(300)
     pan.get_by_role('button',name='entrada.png',exact=True).click(); j.wait_for_timeout(600)
@@ -55,7 +55,7 @@ with sync_playwright() as p:
     j.get_by_role('button',name=re.compile('Cerrar')).click(); j.wait_for_timeout(200)
     check('visor: se cierra', j.get_by_role('dialog').count()==0)
     sync(j); go(l,'/mas/reservas'); sync(l); l.wait_for_timeout(800)
-    check('reservas: Lucía ve la entrada y el estado', l.locator('article',has=l.get_by_role('heading',name='Panteón')).get_by_role('button',name='entrada.png',exact=True).count()==1 and l.get_by_label(re.compile('nota de la reserva vaticani')).input_value()=='LOC123')
+    check('reservas: Lucía ve la entrada y el estado', l.locator('article',has=l.get_by_role('heading',name='Panteón')).get_by_role('button',name='entrada.png',exact=True).count()==1 and l.get_by_label(re.compile('nota de la reserva carbonara')).input_value()=='LOC123')
 
     # ── Plan ──
     go(j,'/plan/2')

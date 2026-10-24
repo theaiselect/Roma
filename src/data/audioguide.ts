@@ -39,10 +39,6 @@ export const audioguide: Track[] = [
     text: 'Se levantó entre 1506 y 1626 sobre la basílica que Constantino había construido encima de la tumba de San Pedro. Trabajaron en ella Bramante, Rafael, Miguel Ángel, que diseñó la cúpula, y Bernini, autor del baldaquino de bronce y de la columnata de la plaza, que abraza a quien llega como dos brazos. A la derecha al entrar está la Piedad de Miguel Ángel, que la esculpió con unos veinticuatro años: es la única obra que firmó, en la banda que cruza el pecho de la Virgen.',
   },
   {
-    id: 'sixtina', placeId: 'musei-vaticani', title: 'La Capilla Sixtina',
-    text: 'Miguel Ángel pintó la bóveda entre 1508 y 1512, casi siempre de pie y mirando hacia arriba, aunque él se consideraba escultor. Buscad la Creación de Adán, con los dos dedos a punto de tocarse. Más de veinte años después volvió para pintar el Juicio Final en la pared del altar. Aquí se reúnen los cardenales para elegir papa. Dentro no se pueden hacer fotos y se pide silencio.',
-  },
-  {
     id: 'bocca', placeId: 'bocca-verita', title: 'La Boca de la Verdad',
     text: 'Es un gran disco de mármol con la cara de un dios, probablemente una tapa de alcantarilla o parte de una fuente de época romana. Está en el pórtico de Santa Maria in Cosmedin desde el siglo diecisiete. La leyenda de que muerde a los mentirosos es medieval, y el cine la hizo famosa con Gregory Peck y Audrey Hepburn en «Vacaciones en Roma».',
   },
