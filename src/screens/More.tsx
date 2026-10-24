@@ -13,6 +13,7 @@ export function BackTitle({ title, back = '/mas' }: { title: string; back?: stri
 
 /** `organizer`: herramientas de preparar el viaje; solo salen en el móvil de Jesús (la app es un regalo para Lucía). */
 export const moreItems: { href: string; label: string; icon: IconName; organizer?: true }[] = [
+  { href: '/mas/imprescindible', label: 'Imprescindible: no olvidar', icon: 'alert' },
   { href: '/mas/reservas', label: 'Reservas y entradas', icon: 'ticket' },
   { href: '/mas/gastos', label: 'Gastos', icon: 'euro' },
   { href: '/mas/monumentos', label: 'Monumentos', icon: 'monument' },

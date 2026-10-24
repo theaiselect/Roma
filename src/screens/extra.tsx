@@ -8,6 +8,8 @@ import { monuments } from '@/data/monuments';
 import { packing, nightBefore } from '@/data/packing';
 import { phraseGroups } from '@/data/phrases';
 import { rules } from '@/data/rules';
+import { musts } from '@/data/musts';
+import { MustRow } from '@/components/MustRow';
 import { days, travellers } from '@/data/trip';
 import type { Who } from '@/data/types';
 import { Expenses } from '@/screens/Expenses';
@@ -211,6 +213,23 @@ function Packing() {
 }
 
 /** Normas y multas (F31). */
+/** Lo que hay que recordar sí o sí: primero lo de todo el viaje y luego día a día. */
+function Musts() {
+  const general = musts.filter((m) => !m.day);
+  return (
+    <div class="stack-lg">
+      <BackTitle title="Imprescindible" />
+      <p class="muted">Lo que no se puede olvidar. Lo de cada día sale también en Hoy.</p>
+      <section class="card stack"><h2>Todo el viaje</h2><ul class="stack" style={{ listStyle: 'none', padding: 0, margin: 0 }}>{general.map((m) => <MustRow key={m.id} m={m} />)}</ul></section>
+      {days.map((d) => {
+        const items = musts.filter((m) => m.day === d.day);
+        if (!items.length) return null;
+        return <section key={d.day} class="card stack"><h2>{d.label}</h2><ul class="stack" style={{ listStyle: 'none', padding: 0, margin: 0 }}>{items.map((m) => <MustRow key={m.id} m={m} />)}</ul></section>;
+      })}
+    </div>
+  );
+}
+
 function Rules() {
   return (
     <div class="stack-lg">
@@ -316,7 +335,7 @@ function Guide() {
 }
 
 const SECTIONS: Record<string, () => preact.JSX.Element> = {
-  audioguia: Guide,
+  audioguia: Guide, imprescindible: Musts,
   gastos: Expenses, monumentos: Monuments, frases: Phrases, carta: Menu, maleta: Packing, normas: Rules, regalos: Gifts, calendario: Calendar,
 };
 

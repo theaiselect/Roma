@@ -1,3 +1,5 @@
+import { mustsFor } from '@/data/musts';
+import { MustRow } from '@/components/MustRow';
 import { Icon } from '@/components/Icon';
 import { meetingPoints, meetingRule } from '@/data/alternatives';
 import { nightBefore } from '@/data/packing';
@@ -218,6 +220,19 @@ export function TripForecast() {
 }
 
 // Bloques extra de «Hoy»: tiempo, atardecer, entradas, último metro, lluvia, encuentro, noche anterior y pregunta del día.
+/** «Imprescindible» de hoy: lo que no se puede olvidar este día. */
+function MustsToday({ day }: { day: DayNum }) {
+  const items = mustsFor(day);
+  if (!items.length) return null;
+  return (
+    <section class="card stack" aria-label="Imprescindible hoy">
+      <p class="eyebrow">Imprescindible hoy</p>
+      <ul class="stack" style={{ listStyle: 'none', padding: 0, margin: 0 }}>{items.map((m) => <MustRow key={m.id} m={m} />)}</ul>
+      <a href="/mas/imprescindible" class="small">Ver todo lo imprescindible</a>
+    </section>
+  );
+}
+
 export function TodayExtras({ now, day }: { now: number; day: DayNum | null }) {
   const organizer = useSettings().profile !== 'lucia';
   const p = romeParts(now);
@@ -231,6 +246,7 @@ export function TodayExtras({ now, day }: { now: number; day: DayNum | null }) {
 
   return (
     <>
+      {day && <MustsToday day={day} />}
       <TicketsSoon now={now} />
       {/* Avisos de organizar el viaje: solo para Jesús (en el móvil de Lucía la app es un regalo, no una lista de tareas). */}
       {organizer && <BackupReminderCard now={now} />}
