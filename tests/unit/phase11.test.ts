@@ -122,3 +122,19 @@ describe('calles con puntos vacíos', () => {
     expect(ways[0]!.name).toBe('Via X');
   });
 });
+
+describe('islas de calles', () => {
+  it('la ruta sale de la calle conectada aunque haya una isla más cerca', async () => {
+    const { buildGraph: bg, routeLeg: rl } = await import('@/lib/graph');
+    const S = 0.001, w: RawWay[] = [];
+    for (let i = 0; i < 8; i++) {
+      w.push({ hw: 'residential', name: `E${i}`, pts: Array.from({ length: 8 }, (_, j) => [41.9 + i * S, 12.49 + j * S] as [number, number]) });
+      w.push({ hw: 'residential', name: `N${i}`, pts: Array.from({ length: 8 }, (_, j) => [41.9 + j * S, 12.49 + i * S] as [number, number]) });
+    }
+    // isla: un trozo de acera suelto justo al lado del destino
+    w.push({ hw: 'footway', pts: [[41.9105, 12.4955], [41.9105, 12.4956]] });
+    const r = rl(bg(w), { lat: 41.9, lng: 12.49 }, { lat: 41.91051, lng: 12.49555 });
+    expect(r).not.toBeNull();
+    expect(r!.distanceM).toBeGreaterThan(1000);
+  });
+});

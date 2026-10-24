@@ -56,6 +56,11 @@ export function buildGraph(ways: RawWay[]): Graph {
       prev = cur;
     }
   }
+  return csr(la, lo, ea, eb, ec, en, names);
+}
+
+/** Cruces + tramos (una vez cada uno) → grafo en CSR, con las dos direcciones y la longitud de cada tramo. */
+function csr(la: ArrayLike<number>, lo: ArrayLike<number>, ea: ArrayLike<number>, eb: ArrayLike<number>, ec: ArrayLike<number>, en: ArrayLike<number>, names: string[]): Graph {
   const n = la.length;
   const deg = new Int32Array(n + 1);
   for (let i = 0; i < ea.length; i++) { deg[ea[i]! + 1]!++; deg[eb[i]! + 1]!++; }
@@ -80,11 +85,37 @@ const CELL = 0.001;
 interface Grid { cells: Map<number, number[]> }
 const gridCache = new WeakMap<Graph, Grid>();
 const cellKey = (cx: number, cy: number) => cx * 100_000 + cy;
+const MIN_ISLAND = 50;
+/** Componentes conexas: a cuál pertenece cada cruce y cuántos cruces tiene cada una. */
+export function components(g: Graph): { of: Int32Array; sizes: number[] } {
+  const of = new Int32Array(g.n).fill(-1);
+  const sizes: number[] = [];
+  const stack: number[] = [];
+  for (let s = 0; s < g.n; s++) {
+    if (of[s]! >= 0) continue;
+    const c = sizes.length;
+    let size = 0;
+    of[s] = c; stack.push(s);
+    while (stack.length) {
+      const u = stack.pop()!;
+      size++;
+      for (let e = g.off[u]!; e < g.off[u + 1]!; e++) { const v = g.to[e]!; if (of[v]! < 0) { of[v] = c; stack.push(v); } }
+    }
+    sizes.push(size);
+  }
+  return { of, sizes };
+}
+
 function gridOf(g: Graph): Grid {
   let gr = gridCache.get(g);
   if (gr) return gr;
+  // Islas (un patio, un trozo de acera dentro del Coliseo…) no llevan a ningún sitio: no se indexan, para que el
+  // punto de salida o llegada se ajuste a una calle conectada con el resto.
+  const comp = components(g);
+  const big = Math.min(MIN_ISLAND, Math.max(...comp.sizes));
   const cells = new Map<number, number[]>();
   for (let i = 0; i < g.n; i++) {
+    if (comp.sizes[comp.of[i]!]! < big) continue;
     const k = cellKey(Math.floor(g.lng[i]! / E6 / CELL), Math.floor(g.lat[i]! / E6 / CELL));
     const c = cells.get(k);
     if (c) c.push(i); else cells.set(k, [i]);
@@ -291,13 +322,25 @@ export interface StoredGraph { v: 1; n: number; lat: Int32Array; lng: Int32Array
 export const toStored = (g: Graph): StoredGraph => ({ v: 1, ...g });
 export const fromStored = (s: StoredGraph | undefined): Graph | null => (s && s.v === 1 && s.n > 0 ? s : null);
 
-/** El grafo en JSON (para el paquete ya preparado que se sirve desde la propia app). */
-export interface PackedGraph { n: number; lat: number[]; lng: number[]; off: number[]; to: number[]; len: number[]; cls: number[]; nm: number[]; names: string[] }
-export const packGraph = (g: Graph): PackedGraph => ({
-  n: g.n, lat: Array.from(g.lat), lng: Array.from(g.lng), off: Array.from(g.off), to: Array.from(g.to),
-  len: Array.from(g.len, (x) => Math.round(x * 10) / 10), cls: Array.from(g.cls), nm: Array.from(g.nm), names: g.names,
-});
-export const unpackGraph = (p: PackedGraph): Graph => ({
-  n: p.n, lat: Int32Array.from(p.lat), lng: Int32Array.from(p.lng), off: Int32Array.from(p.off), to: Int32Array.from(p.to),
-  len: Float32Array.from(p.len), cls: Uint8Array.from(p.cls), nm: Int32Array.from(p.nm), names: p.names,
-});
+/**
+ * El grafo en JSON, compacto (para el paquete ya preparado que se sirve desde la propia app): cada tramo una sola
+ * vez, sin longitudes (se recalculan) y con diferencias en vez de números grandes.
+ */
+export interface PackedGraph { n: number; lat: number[]; lng: number[]; ea: number[]; eb: number[]; cls: number[]; nm: number[]; names: string[] }
+const delta = (a: ArrayLike<number>): number[] => { const out = new Array<number>(a.length); let prev = 0; for (let i = 0; i < a.length; i++) { out[i] = a[i]! - prev; prev = a[i]!; } return out; };
+const undelta = (d: number[]): Int32Array => { const out = new Int32Array(d.length); let acc = 0; for (let i = 0; i < d.length; i++) { acc += d[i]!; out[i] = acc; } return out; };
+
+export function packGraph(g: Graph): PackedGraph {
+  const ea: number[] = [], eb: number[] = [], cls: number[] = [], nm: number[] = [];
+  for (let a = 0; a < g.n; a++) for (let e = g.off[a]!; e < g.off[a + 1]!; e++) {
+    const b = g.to[e]!;
+    if (b > a) { ea.push(a); eb.push(b - a); cls.push(g.cls[e]!); nm.push(g.nm[e]!); }
+  }
+  return { n: g.n, lat: delta(g.lat), lng: delta(g.lng), ea: delta(ea), eb, cls, nm, names: g.names };
+}
+
+export function unpackGraph(p: PackedGraph): Graph {
+  const ea = undelta(p.ea);
+  const eb = Int32Array.from(p.eb, (d, i) => ea[i]! + d);
+  return csr(undelta(p.lat), undelta(p.lng), ea, eb, p.cls, p.nm, p.names);
+}
