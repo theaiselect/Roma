@@ -77,10 +77,10 @@ export async function applyUpdate(): Promise<boolean> {
   return true;
 }
 
-/** Al volver a la app (y como mucho cada 30 min) se busca versión nueva. Cuando una queda lista se llama a
+/** Al volver a la app (y como mucho cada 5 min) se busca versión nueva. Cuando una queda lista se llama a
  * `onWaiting` (el aviso de abajo): no se depende solo de workbox-window, que deja de escuchar tras la primera
  * versión que no ha pedido él mismo. */
-export function watchForUpdates(reg: ServiceWorkerRegistration, onWaiting: () => void, everyMs = 30 * 60_000): void {
+export function watchForUpdates(reg: ServiceWorkerRegistration, onWaiting: () => void, everyMs = 5 * 60_000): void {
   if (reg.waiting) onWaiting();
   reg.addEventListener('updatefound', () => {
     const sw = reg.installing;
