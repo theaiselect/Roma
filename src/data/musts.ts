@@ -6,7 +6,7 @@ export interface MustItem { id: string; text: string; note?: string; /** Sin dí
 
 export const musts: MustItem[] = [
   { id: 'dni', text: 'DNI siempre encima', note: 'Lo piden en los vuelos y en el Coliseo (la entrada es nominativa).' },
-  { id: 'efectivo', text: 'Efectivo: 28 € para la tasa del hotel y algo más', note: 'La tasa turística (3,50 € por persona y noche) se paga en efectivo en recepción. Regoli y Boccione solo aceptan efectivo.' },
+  { id: 'efectivo', text: 'Llevar 100 € en efectivo para todo el viaje', note: '28 € son para la tasa turística del hotel (3,50 € por persona y noche, en recepción). Regoli y Boccione solo aceptan efectivo.' },
   { id: 'hotel', text: 'Hotel: Via Zucchelli 32, 1.º piso. Fuera no hay cartel', note: 'Buscad el portal n.º 32, junto al metro Barberini. Recepción de 08:00 a 19:00; de noche está cerrada.' },
   { id: 'mochila', text: 'Solo la mochila de 40×30×20 en Ryanair', note: 'Batería externa siempre en la mochila, nunca facturada.' },
   { id: 'escalinata', text: 'No sentarse ni comer en la escalinata de Plaza de España', note: 'Hay multa. Tampoco comer en fuentes y monumentos.' },
