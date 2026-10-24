@@ -38,6 +38,7 @@ Auth: cabecera `x-trip-code` (api/_auth.ts normaliza: minúsculas, sin espacios,
 - Ya reservado (24 oct): Coliseo, Felice y Tarjeta Sanitaria pedida. Dar Bruttone reservado. Fortunata: sin reserva, decisión de Jesús (hacer cola). Comida planificada: 198 € p. p. (tope 230). Museos Vaticanos y Sixtina: agotados, no entran (decisión de Jesús, 24 oct); el lunes por la mañana es San Pedro y la cúpula. Lista de pendientes con casillas: https://claude.ai/artifact/2XMtffoCBNPWVsH38DNRjE
 - Billetes comprados (24 oct): bus Alsa Plasencia→Sevilla 30 oct 03:05 y tren Renfe Madrid-Atocha→Plasencia 3 nov 16:38 (enlace en Monfragüe, llega 19:54).
 - Contestar al email del hotel: llegada vie 30 ~14:15, 2 personas; check-out el lunes por la mañana y dónde dejar la llave.
+- «Imprescindible» (24 oct, pedido de Jesús): `src/data/musts.ts`, pantalla `/mas/imprescindible` (primera de Más) y tarjeta «Imprescindible hoy» en Hoy (`MustsToday`). Si cambia el plan, revisar también esta lista.
 - «Sorpasso»: restaurante que aparece solo en la auditoría original (domingo cerrado); no está en los datos. Preguntar si lo quieren y añadir con horario real.
 
 ## Pendiente (de la app) / sin verificar

@@ -61,7 +61,7 @@ export const itinerary: Stop[] = [
   { id: 'd3-back', day: 3, placeId: 'hotel-soha', title: 'Vuelta al hotel', note: 'El metro cierra a las 23:30 el domingo: tranvía 8, taxi o 35–40 min a pie' },
 
   // ── IV · Lunes 2 de noviembre ─────────────────────────────────
-  { id: 'd4-checkout', day: 4, start: '08:45', placeId: 'hotel-soha', title: 'Check-out en recepción', note: 'El martes salís a las 05:30 con la recepción cerrada: el hotel pide el check-out la víspera. Pagar la tasa si no se pagó (28 € en efectivo) y preguntar dónde dejar la llave' },
+  { id: 'd4-checkout', day: 4, start: '08:45', placeId: 'hotel-soha', title: 'Check-out en recepción', note: 'Check-out es avisar en recepción de que os vais: pagar lo pendiente (la tasa de 28 € en efectivo, si no se pagó al llegar) y preguntar dónde dejar la llave. Se hace hoy porque el martes salís a las 05:30 con la recepción cerrada. Esta noche seguís durmiendo en el hotel con normalidad' },
   { id: 'd4-sciascia', day: 4, start: '09:30', placeId: 'sciascia', title: 'Desayuno en Sciascia Caffè 1919' },
   { id: 'd4-sanpietro', day: 4, start: '10:15', placeId: 'san-pietro', title: 'Plaza y Basílica de San Pedro', note: 'Gratis. A esta hora el control puede tener 30–45 min de cola. Hombros y rodillas cubiertos. Los Museos Vaticanos y la Sixtina, solo por fuera (24 oct: agotados)' },
   { id: 'd4-cupola', day: 4, start: '11:30', placeId: 'cupola', title: 'Cúpula de San Pedro', note: 'Taquilla: 10 € escaleras / 15 € ascensor; 551 escalones' },
