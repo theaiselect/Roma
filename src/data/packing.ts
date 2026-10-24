@@ -15,7 +15,7 @@ export const packing: PackItem[] = [
   { id: 'calzado', text: 'Calzado cómodo ya usado' },
   { id: 'vaticano', text: 'Ropa que cubra hombros y rodillas (lunes, Basílica de San Pedro)' },
   { id: 'abrigo', text: 'Chaqueta para la noche y algo para la lluvia' },
-  { id: 'efectivo', text: 'Algo de efectivo (Regoli, Boccione y propinas)' },
+  { id: 'efectivo', text: '100 € en efectivo', note: '28 € para la tasa del hotel; el resto para Regoli, Boccione y propinas.' },
   { id: 'halloween', text: 'Algo para la noche de Halloween (sábado)' },
   { id: 'botella', text: 'Botella reutilizable para las fuentes (nasoni)' },
 ];
