@@ -74,7 +74,7 @@ export const itinerary: Stop[] = [
   { id: 'd4-vittoriano', day: 4, start: '16:40', placeId: 'vittoriano', title: 'Terraza del Vittoriano', note: 'Reducida 5 €' },
   { id: 'd4-campidoglio', day: 4, start: '17:45', placeId: 'campidoglio', title: 'Campidoglio', note: 'Vistas del Foro al anochecer' },
   { id: 'd4-boccione', day: 4, start: '18:15', placeId: 'boccione', title: 'Boccione', note: 'Lunes hasta las 19:00 · solo efectivo' },
-  { id: 'd4-bruttone', day: 4, start: '20:15', placeId: 'dar-bruttone', title: 'Cena en Dar Bruttone (Monti)', ticketId: 'bruttone', note: 'La Carbonara estaba llena. El martes la alarma suena a las 05:00' },
+  { id: 'd4-bruttone', day: 4, start: '21:30', placeId: 'dar-bruttone', title: 'Cena en Dar Bruttone (Monti)', ticketId: 'bruttone', note: 'Reservado. El martes la alarma suena a las 05:00: no alargarla mucho' },
 
   // ── V · Martes 3 de noviembre ─────────────────────────────────
   { id: 'd5-alarm', day: 5, start: '05:00', title: 'Alarma', note: 'Mochilas hechas la noche antes', leg: true },

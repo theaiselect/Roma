@@ -32,10 +32,10 @@ Auth: cabecera `x-trip-code` (api/_auth.ts normaliza: minúsculas, sin espacios,
 - Vuelos: Sevilla→Fiumicino 30 oct 9:30; Fiumicino→Madrid 3 nov 9:00. Alarma 05:00 el martes; metro 05:35; recepción del hotel cerrada de noche (pedir cómo dejar la llave).
 - Entradas: Panteón comprado (lun 2, 15:00–16:00). Coliseo: van a por Full Experience Arena el sáb 31. Galleria Borghese agotada → plan B Palazzo Barberini (dom 1).
 - Comidas cambiadas el 24 oct: vie 14:30 Piccolo Buco (plan B Pinsere) · dom 09:00 desayuno en barra (sin Faro) · dom 13:00 Pastasciutta Trevi (plan B Pastificio Guerra). Plan de comida 228 € p. p., tope 230 €.
-- Cenas (horas en el plan): vie Osteria da Fortunata (Panteón) 21:00 (Roscioli y Armando estaban llenos) · sáb Felice a Testaccio 21:30 (reservado) · dom Ai Marmi 21:00 · lun Dar Bruttone (Monti) 20:15 (reserva online; La Carbonara estaba llena). Taverna dei Fori salió porque solo reserva por teléfono y Jesús no quiere llamar.
+- Cenas (horas en el plan): vie Osteria da Fortunata (Panteón) 21:00 (Roscioli y Armando estaban llenos) · sáb Felice a Testaccio 21:30 (reservado) · dom Ai Marmi 21:00 · lun Dar Bruttone (Monti) 21:30 (reservado; La Carbonara estaba llena). Taverna dei Fori salió porque solo reserva por teléfono y Jesús no quiere llamar.
 
 ## Pendiente (del usuario)
-- Ya reservado (24 oct): Coliseo, Felice y Tarjeta Sanitaria pedida. Falta: Dar Bruttone (online) y confirmar si Fortunata tiene reserva. Comida planificada: 198 € p. p. (tope 230). Museos Vaticanos y Sixtina: agotados, no entran (decisión de Jesús, 24 oct); el lunes por la mañana es San Pedro y la cúpula. Lista de pendientes con casillas: https://claude.ai/artifact/2XMtffoCBNPWVsH38DNRjE
+- Ya reservado (24 oct): Coliseo, Felice y Tarjeta Sanitaria pedida. Dar Bruttone reservado. Falta confirmar si Fortunata tiene reserva. Comida planificada: 198 € p. p. (tope 230). Museos Vaticanos y Sixtina: agotados, no entran (decisión de Jesús, 24 oct); el lunes por la mañana es San Pedro y la cúpula. Lista de pendientes con casillas: https://claude.ai/artifact/2XMtffoCBNPWVsH38DNRjE
 - Billetes comprados (24 oct): bus Alsa Plasencia→Sevilla 30 oct 03:05 y tren Renfe Madrid-Atocha→Plasencia 3 nov 16:38 (enlace en Monfragüe, llega 19:54).
 - Mensaje al hotel (mochilas el viernes, llave el martes, tasa turística).
 - «Sorpasso»: restaurante que aparece solo en la auditoría original (domingo cerrado); no está en los datos. Preguntar si lo quieren y añadir con horario real.
