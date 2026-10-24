@@ -7,7 +7,7 @@ export const itinerary: Stop[] = [
   { id: 'd1-flight', day: 1, start: '09:30', end: '12:35', placeId: 'fco', title: 'Ryanair SVQ → FCO', note: 'Llega 12:35; solo mochila 40×30×20', leg: true },
   { id: 'd1-leonardo', day: 1, start: '13:15', approx: true, placeId: 'termini', title: 'Leonardo Express FCO → Termini', note: '32 min, 14 €; andenes 23–24 en Termini', leg: true },
   { id: 'd1-lucia', day: 1, start: '13:50', placeId: 'termini', title: 'Encuentro con Lucía', note: 'Lucía llega a Termini a las 11:45, unas 2 h antes que Jesús', leg: true },
-  { id: 'd1-hotel', day: 1, placeId: 'hotel-soha', title: 'Metro A Termini → Barberini, dejar mochilas', leg: true },
+  { id: 'd1-hotel', day: 1, start: '14:15', approx: true, placeId: 'hotel-soha', title: 'Metro A Termini → Barberini, check-in en el hotel', note: 'Via Zucchelli 32, 1.º piso: fuera no hay cartel. Tasa turística: 28 € en efectivo en recepción', leg: true },
   { id: 'd1-piccolo-buco', day: 1, start: '14:30', placeId: 'piccolo-buco', title: 'Comida en Piccolo Buco', note: 'Cierra a las 15:00: no llegar más tarde de las 14:45', planB: [
     { placeId: 'pinsere', reason: 'Si llegáis tarde o hay mucha cola' },
   ] },
@@ -61,6 +61,7 @@ export const itinerary: Stop[] = [
   { id: 'd3-back', day: 3, placeId: 'hotel-soha', title: 'Vuelta al hotel', note: 'El metro cierra a las 23:30 el domingo: tranvía 8, taxi o 35–40 min a pie' },
 
   // ── IV · Lunes 2 de noviembre ─────────────────────────────────
+  { id: 'd4-checkout', day: 4, start: '08:45', placeId: 'hotel-soha', title: 'Check-out en recepción', note: 'El martes salís a las 05:30 con la recepción cerrada: el hotel pide el check-out la víspera. Pagar la tasa si no se pagó (28 € en efectivo) y preguntar dónde dejar la llave' },
   { id: 'd4-sciascia', day: 4, start: '09:30', placeId: 'sciascia', title: 'Desayuno en Sciascia Caffè 1919' },
   { id: 'd4-sanpietro', day: 4, start: '10:15', placeId: 'san-pietro', title: 'Plaza y Basílica de San Pedro', note: 'Gratis. A esta hora el control puede tener 30–45 min de cola. Hombros y rodillas cubiertos. Los Museos Vaticanos y la Sixtina, solo por fuera (24 oct: agotados)' },
   { id: 'd4-cupola', day: 4, start: '11:30', placeId: 'cupola', title: 'Cúpula de San Pedro', note: 'Taquilla: 10 € escaleras / 15 € ascensor; 551 escalones' },

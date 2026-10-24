@@ -37,5 +37,5 @@ export const hotel = {
   name: 'Hotel Soha Piazza di Spagna',
   addressIt: 'Via Zucchelli 32, Roma',
   taxiIt: 'Via Zucchelli 32, Roma',
-  reception: '08:00–16:00',
+  reception: '08:00–19:00',
 };

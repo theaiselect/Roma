@@ -27,7 +27,7 @@ Auth: cabecera `x-trip-code` (api/_auth.ts normaliza: minúsculas, sin espacios,
 - Hoy: `screens/Today.tsx` + `today-extras.tsx` (incluye «Hoy cierran…»).
 
 ## Datos del viaje confirmados
-- Hotel: Soha Piazza di Spagna Boutique, Via Zucchelli 32 (1.º con ascensor), tel +39 351 247 3415. Booking: entrada vie 30 desde 14:00, salida mar 3 de 08:00 a 11:00. Cancelación gratis hasta 26 oct 23:59. Referencia y PIN están en la app (Emergencias).
+- Hotel: Soha Piazza di Spagna Boutique, Via Zucchelli 32 (1.º con ascensor), tel +39 351 247 3415. Booking: entrada vie 30 desde 14:00, salida mar 3 a las 05:30. Email del hotel (24 oct): sin cartel fuera, check-in 14:00–19:00, check-out 08:00–10:30 o la víspera antes de las 19:00 (por eso hay parada «Check-out» el lunes 08:45), tasa 3,50 € p. p./noche en efectivo (28 €). Cancelación gratis hasta 26 oct 23:59. Referencia y PIN están en la app (Emergencias).
 - Lucía llega a Termini a las 11:45 el 30; quedan en **Termini**.
 - Vuelos: Sevilla→Fiumicino 30 oct 9:30; Fiumicino→Madrid 3 nov 9:00. Alarma 05:00 el martes; metro 05:35; recepción del hotel cerrada de noche (pedir cómo dejar la llave).
 - Entradas: Panteón comprado (lun 2, 15:00–16:00). Coliseo: van a por Full Experience Arena el sáb 31. Galleria Borghese agotada → plan B Palazzo Barberini (dom 1).
@@ -37,7 +37,7 @@ Auth: cabecera `x-trip-code` (api/_auth.ts normaliza: minúsculas, sin espacios,
 ## Pendiente (del usuario)
 - Ya reservado (24 oct): Coliseo, Felice y Tarjeta Sanitaria pedida. Dar Bruttone reservado. Fortunata: sin reserva, decisión de Jesús (hacer cola). Comida planificada: 198 € p. p. (tope 230). Museos Vaticanos y Sixtina: agotados, no entran (decisión de Jesús, 24 oct); el lunes por la mañana es San Pedro y la cúpula. Lista de pendientes con casillas: https://claude.ai/artifact/2XMtffoCBNPWVsH38DNRjE
 - Billetes comprados (24 oct): bus Alsa Plasencia→Sevilla 30 oct 03:05 y tren Renfe Madrid-Atocha→Plasencia 3 nov 16:38 (enlace en Monfragüe, llega 19:54).
-- Mensaje al hotel (mochilas el viernes, llave el martes, tasa turística).
+- Contestar al email del hotel: llegada vie 30 ~14:15, 2 personas; check-out el lunes por la mañana y dónde dejar la llave.
 - «Sorpasso»: restaurante que aparece solo en la auditoría original (domingo cerrado); no está en los datos. Preguntar si lo quieren y añadir con horario real.
 
 ## Pendiente (de la app) / sin verificar
