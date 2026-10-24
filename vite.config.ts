@@ -32,7 +32,8 @@ export default defineConfig({
         rollupFormat: 'iife', // se registra como script clásico: un módulo ES haría fallar el registro
         // roma.pmtiles NO va en el precaché (pesa ~25 MB): tiene su propia caché.
         globPatterns: ['**/*.{js,mjs,css,html,woff2,svg,png,webmanifest,json,pbf}'],
-        globIgnores: ['**/map/roma.pmtiles'],
+        // offline/roma.json (calles, sitios, metro…) tampoco: se baja aparte, al preparar la descarga sin conexión.
+        globIgnores: ['**/map/roma.pmtiles', '**/offline/**'],
       },
       manifest: {
         name: 'Roma',

@@ -70,9 +70,19 @@ export function estimateMB(): number {
   return Math.round(tilesForBbox(DOWNLOAD_BBOX, 0, MAX_TILE_ZOOM).length * 0.05);
 }
 
+/** Una tesela que no llega en este tiempo se da por fallida (y se reintenta al final): un corte no deja la descarga colgada. */
+const TILE_TIMEOUT_MS = 20_000;
+/** Peticiones a la vez. OpenFreeMap va por HTTP/2, así que no penaliza pedir varias. */
+const MAP_PARALLEL = 8;
+
 async function put(cache: Cache, url: string): Promise<number> {
   if (await cache.match(url)) return 0;
-  const res = await fetch(url);
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), TILE_TIMEOUT_MS);
+  try { return await store(cache, url, await fetch(url, { signal: ctl.signal })); } finally { clearTimeout(t); }
+}
+
+async function store(cache: Cache, url: string, res: Response): Promise<number> {
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   const copy = res.clone();
   const size = (await copy.arrayBuffer()).byteLength;
@@ -125,7 +135,7 @@ export async function downloadRoma(onProgress: (done: number, total: number) => 
         if (progress) onProgress(++done, urls.length);
       }
     };
-    await Promise.all(Array.from({ length: 6 }, worker));
+    await Promise.all(Array.from({ length: MAP_PARALLEL }, worker));
   };
   await runAll(urls, true);
   if (signal?.aborted) throw new DOMException('Cancelado', 'AbortError');

@@ -92,7 +92,7 @@ export function ReadinessCard() {
   };
 
   const fix = (c: Check) => {
-    if (c.fix === 'download') void runAuto(true);
+    if (c.fix === 'download') void runAuto('missing');
     else if (c.fix === 'sync') void requestSync(true);
     else if (c.fix === 'install') document.getElementById('instalar')?.scrollIntoView({ block: 'center' });
     else if (c.fix === 'code') document.getElementById('codigo')?.scrollIntoView({ block: 'center' });

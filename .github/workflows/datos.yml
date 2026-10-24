@@ -1,0 +1,31 @@
+# Prepara public/offline/roma.json (calles, sitios, puntos y metro) con internet real y lo sube a la misma rama.
+# La app lo descarga de su propio dominio en vez de esperar a Overpass. Se lanza a mano, cada domingo y al cambiar el propio script.
+name: Datos sin conexión
+on:
+  workflow_dispatch:
+  push:
+    paths: ['tests/pack/**', 'vitest.pack.config.ts', '.github/workflows/datos.yml']
+  schedule:
+    - cron: '23 4 * * 0'
+permissions:
+  contents: write
+concurrency: { group: datos-sin-conexion, cancel-in-progress: false }
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx vitest run --config vitest.pack.config.ts
+      - name: Subir el paquete
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/offline/roma.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Datos sin conexión actualizados"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
