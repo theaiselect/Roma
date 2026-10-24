@@ -3,7 +3,7 @@ import type { Reservation } from './types';
 // Estado según el documento (18 oct 2026). Se actualiza desde la app (F11, sincronizado).
 export const reservations: Reservation[] = [
   { id: 'vaticani', title: 'Museos Vaticanos', status: 'todo', day: 4, time: '08:00', note: '1 Intero (Jesús) + 1 Ridotto (Lucía, carnet universitario), 40 € en total. Comprobar si Jesús puede sacar Ridotto con carnet ISIC.' },
-  { id: 'colosseo', title: 'Coliseo · Full Experience Arena', status: 'todo', day: 2, time: '08:30', url: 'https://ticketing.colosseo.it', note: 'No quedaba Sotterranei e Arena: ir a por Arena para el sábado 31 (ya a la venta). Si no hay, entrada estándar de 24 h. Nominativa, llevar DNI.' },
+  { id: 'colosseo', title: 'Coliseo', status: 'bought', day: 2, time: '08:30', url: 'https://ticketing.colosseo.it', note: 'Comprado (24 oct). Nominativa: llevar DNI.' },
   { id: 'borghese', title: 'Galleria Borghese', status: 'soldout', url: 'https://www.tosc.it', note: 'Agotada. Mirar cancelaciones; plan B: Palazzo Barberini.' },
   { id: 'pantheon', title: 'Panteón', status: 'bought', day: 4, time: '15:00', note: 'Franja 15:00–16:00, 2 entradas con descuento, 4 € en total.' },
   { id: 'roscioli', title: 'Roscioli Salumeria (cena)', status: 'todo', day: 1, time: '21:30', url: 'https://salumeriaroscioli.com/pages/prenota', note: 'Reserva online: para cenar solo hay 19:00, 21:30 o 21:45. Pide tarjeta como garantía (no cobra); si no cancelas por email a booking@salumeriaroscioli.com, cobra 20 € por persona. Vale cuando llega el email de confirmación (mirar spam). Si no hay mesa: Armando al Pantheon.' },
