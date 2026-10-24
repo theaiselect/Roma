@@ -16,7 +16,7 @@ export const itinerary: Stop[] = [
   { id: 'd1-pincio', day: 1, start: '16:45', placeId: 'pincio', title: 'Mirador del Pincio' },
   { id: 'd1-popolo', day: 1, start: '17:30', placeId: 'piazza-popolo', title: 'Piazza del Popolo y Santa Maria del Popolo', note: 'Caravaggio' },
   { id: 'd1-spagna', day: 1, start: '18:30', placeId: 'piazza-spagna', title: 'Plaza de España y Via Condotti', note: 'No sentarse en la escalinata' },
-  { id: 'd1-armando', day: 1, start: '21:00', placeId: 'armando-pantheon', title: 'Cena en Armando al Pantheon', ticketId: 'armando', note: 'Roscioli estaba lleno. Trevi queda a 10 min a pie' },
+  { id: 'd1-fortunata', day: 1, start: '21:00', placeId: 'fortunata-pantheon', title: 'Cena en Osteria da Fortunata (Panteón)', ticketId: 'fortunata', note: 'Roscioli y Armando estaban llenos. Trevi queda a 10 min a pie' },
   { id: 'd1-trevi', day: 1, start: '22:45', placeId: 'trevi', title: 'Fontana di Trevi', note: 'Gratis después de las 22:00 (2 € de 9 a 22; viernes desde 11:30)' },
 
   // ── II · Sábado 31 de octubre ─────────────────────────────────
@@ -74,9 +74,7 @@ export const itinerary: Stop[] = [
   { id: 'd4-vittoriano', day: 4, start: '16:40', placeId: 'vittoriano', title: 'Terraza del Vittoriano', note: 'Reducida 5 €' },
   { id: 'd4-campidoglio', day: 4, start: '17:45', placeId: 'campidoglio', title: 'Campidoglio', note: 'Vistas del Foro al anochecer' },
   { id: 'd4-boccione', day: 4, start: '18:15', placeId: 'boccione', title: 'Boccione', note: 'Lunes hasta las 19:00 · solo efectivo' },
-  { id: 'd4-carbonara', day: 4, start: '20:30', placeId: 'la-carbonara-monti', title: 'Cena en La Carbonara (Monti)', ticketId: 'carbonara', note: 'Última comanda 21:30', planB: [
-    { placeId: 'dar-bruttone', reason: 'Si no hay mesa (también se reserva online)' },
-  ] },
+  { id: 'd4-bruttone', day: 4, start: '20:15', placeId: 'dar-bruttone', title: 'Cena en Dar Bruttone (Monti)', ticketId: 'bruttone', note: 'La Carbonara estaba llena. El martes la alarma suena a las 05:00' },
 
   // ── V · Martes 3 de noviembre ─────────────────────────────────
   { id: 'd5-alarm', day: 5, start: '05:00', title: 'Alarma', note: 'Mochilas hechas la noche antes', leg: true },

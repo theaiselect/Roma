@@ -48,7 +48,7 @@ export const luciaTrain = {
 export const budget = {
   /** Comida: 230 € por persona en todo el viaje (subido el 24 oct para cenar en Roscioli el viernes).
    *  El plan suma 223 €; el desayuno en barra del domingo (~2–3 €) no tiene sitio fijo. */
-  foodPlannedPPCents: 22300,
+  foodPlannedPPCents: 19800,
   foodCapPPCents: 23000,
   drinksPerNightCents: { min: 1500, max: 2000 },
   tickets: {
