@@ -136,11 +136,24 @@ export function loadPack(fresh = false): Promise<OfflinePack | null> {
 }
 
 // ── Calles ──────────────────────────────────────────────────────
-interface WayEl { type: string; tags?: Record<string, string>; geometry?: { lat: number; lon: number }[] }
+interface WayEl { type: string; tags?: Record<string, string>; geometry?: ({ lat: number; lon: number } | null)[] }
 
+/**
+ * Calles de Overpass. Algunos servidores (overpass.openstreetmap.fr, 24 oct) devuelven `null` en puntos de la
+ * geometría: la calle se parte en los tramos que sí tienen puntos (antes rompía toda la etapa).
+ */
 export function parseWays(r: { elements?: WayEl[] } | null): RawWay[] {
-  return (r?.elements ?? []).flatMap((e) => (e.type === 'way' && e.geometry && e.geometry.length > 1 && e.tags?.highway
-    ? [{ hw: e.tags.highway, name: e.tags.name, pts: e.geometry.map((g) => [g.lat, g.lon] as [number, number]) }] : []));
+  const out: RawWay[] = [];
+  for (const e of r?.elements ?? []) {
+    if (e.type !== 'way' || !e.geometry || !e.tags?.highway) continue;
+    let run: [number, number][] = [];
+    const flush = () => { if (run.length > 1) out.push({ hw: e.tags!.highway!, name: e.tags!.name, pts: run }); run = []; };
+    for (const g of e.geometry) {
+      if (g && typeof g.lat === 'number' && typeof g.lon === 'number') run.push([g.lat, g.lon]); else flush();
+    }
+    flush();
+  }
+  return out;
 }
 
 export const wayQuery = (b: Bbox) => `[out:json][timeout:90];way["highway"]["highway"!~"^(motorway|motorway_link|proposed|construction|raceway|bus_guideway|corridor|elevator|platform|bridleway)$"]["foot"!~"^(no|private)$"]["access"!~"^(private|no)$"]["indoor"!="yes"](${b.south},${b.west},${b.north},${b.east});out tags geom qt;`;

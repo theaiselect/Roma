@@ -110,3 +110,15 @@ describe('progreso total (etapas a la vez)', () => {
     expect(activeStages({ need: ['map', 'graph', 'pois'], progress: { graph: { done: 1, total: 1, end: 'ok' } } })).toEqual(['map', 'pois']);
   });
 });
+
+describe('calles con puntos vacíos', () => {
+  it('parte la calle en los tramos con puntos en vez de romperse', async () => {
+    const { parseWays } = await import('@/lib/offline-data');
+    const ways = parseWays({ elements: [
+      { type: 'way', tags: { highway: 'residential', name: 'Via X' }, geometry: [{ lat: 1, lon: 1 }, { lat: 1, lon: 2 }, null, { lat: 1, lon: 3 }, { lat: 1, lon: 4 }, { lat: 1, lon: 5 }] },
+      { type: 'way', tags: { highway: 'footway' }, geometry: [null, { lat: 2, lon: 1 }, null] },
+    ] });
+    expect(ways.map((w) => w.pts.length)).toEqual([2, 3]);
+    expect(ways[0]!.name).toBe('Via X');
+  });
+});
