@@ -35,10 +35,10 @@ export const itinerary: Stop[] = [
   { id: 'd2-bocca', day: 2, start: '15:20', placeId: 'bocca-verita', title: 'Boca de la Verdad y templos del Foro Boario', note: 'Cola corta a esta hora' },
   { id: 'd2-circo', day: 2, start: '15:50', placeId: 'circo-massimo', title: 'Circo Máximo', note: 'De paso' },
   { id: 'd2-aventino', day: 2, start: '16:30', placeId: 'aventino', title: 'Aventino', note: 'Santa Sabina, Giardino degli Aranci (atardecer), ojo de la cerradura de los Caballeros de Malta' },
-  { id: 'd2-felice', day: 2, start: '21:00', placeId: 'felice-testaccio', title: 'Cena en Felice a Testaccio', ticketId: 'felice', planB: [
+  { id: 'd2-felice', day: 2, start: '21:30', placeId: 'felice-testaccio', title: 'Cena en Felice a Testaccio', ticketId: 'felice', planB: [
     { placeId: 'flavio-velavevodetto', reason: 'Si no hay mesa' },
   ] },
-  { id: 'd2-copas', day: 2, start: '23:15', title: 'Copas de Halloween', note: 'Testaccio o Trastevere' },
+  { id: 'd2-copas', day: 2, start: '23:30', title: 'Copas de Halloween', note: 'Testaccio o Trastevere' },
   { id: 'd2-trapizzino', day: 2, start: '00:30', afterMidnight: true, placeId: 'trapizzino-testaccio', title: 'Trapizzino Testaccio', note: 'Sábado hasta 01:00. Vuelta: Línea B (Piramide) → Termini → Línea A, hasta 01:30' },
 
   // ── III · Domingo 1 de noviembre (festivo: Ognissanti) ────────
