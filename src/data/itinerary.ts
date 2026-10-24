@@ -16,7 +16,7 @@ export const itinerary: Stop[] = [
   { id: 'd1-pincio', day: 1, start: '16:45', placeId: 'pincio', title: 'Mirador del Pincio' },
   { id: 'd1-popolo', day: 1, start: '17:30', placeId: 'piazza-popolo', title: 'Piazza del Popolo y Santa Maria del Popolo', note: 'Caravaggio' },
   { id: 'd1-spagna', day: 1, start: '18:30', placeId: 'piazza-spagna', title: 'Plaza de España y Via Condotti', note: 'No sentarse en la escalinata' },
-  { id: 'd1-fortunata', day: 1, start: '21:00', placeId: 'fortunata-pantheon', title: 'Cena en Osteria da Fortunata (Panteón)', ticketId: 'fortunata', note: 'Roscioli y Armando estaban llenos. Trevi queda a 10 min a pie' },
+  { id: 'd1-fortunata', day: 1, start: '20:45', placeId: 'fortunata-pantheon', title: 'Cena en Osteria da Fortunata (Panteón)', note: 'Sin reserva (a parejas no reservan): llegar a las 20:45 y hacer cola. Si es muy larga, sus locales de Campo de\' Fiori están a 5 min. Trevi queda a 10 min a pie' },
   { id: 'd1-trevi', day: 1, start: '22:45', placeId: 'trevi', title: 'Fontana di Trevi', note: 'Gratis después de las 22:00 (2 € de 9 a 22; viernes desde 11:30)' },
 
   // ── II · Sábado 31 de octubre ─────────────────────────────────

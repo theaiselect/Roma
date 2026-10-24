@@ -5,7 +5,6 @@ export const reservations: Reservation[] = [
   { id: 'colosseo', title: 'Coliseo', status: 'bought', day: 2, time: '08:30', url: 'https://ticketing.colosseo.it', note: 'Comprado (24 oct). Nominativa: llevar DNI.' },
   { id: 'borghese', title: 'Galleria Borghese', status: 'soldout', url: 'https://www.tosc.it', note: 'Agotada. Mirar cancelaciones; plan B: Palazzo Barberini.' },
   { id: 'pantheon', title: 'Panteón', status: 'bought', day: 4, time: '15:00', note: 'Franja 15:00–16:00, 2 entradas con descuento, 4 € en total.' },
-  { id: 'fortunata', title: 'Osteria da Fortunata, Panteón (cena)', status: 'pending', day: 1, time: '21:00', url: 'https://osteriadafortunata.it/prenota/', note: 'Roscioli y Armando estaban llenos (24 oct). A parejas no suelen reservar: si no hay reserva, ir a las 21:00 y esperar turno.' },
   { id: 'felice', title: 'Felice a Testaccio', status: 'bought', day: 2, time: '21:30', phone: '+39 06 574 6800', url: 'https://www.feliceatestaccio.it', note: 'Reservado (24 oct) para 2. Mesa como máximo 2 h y válida hasta 20 min después de la hora. Cancelar como tarde 12 h antes (desde el enlace del email de confirmación) o cobran 15 € por persona.' },
   { id: 'bruttone', title: 'Dar Bruttone, Monti (cena)', status: 'bought', day: 4, time: '21:30', url: 'https://darbruttonerionemonti.plateform.app/r/sitoweb', note: 'Reservado (24 oct) para las 21:30. Sustituye a La Carbonara, que estaba llena.' },
   { id: 'uber', title: 'Uber Reserve 07:40 en Plaza de Armas', status: 'todo', day: 1, time: '07:40' },
