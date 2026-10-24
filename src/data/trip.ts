@@ -21,10 +21,10 @@ export const days: TripDay[] = [
 export const hotel = {
   placeId: 'hotel-soha',
   name: 'Soha Piazza di Spagna Boutique',
-  address: 'Via Zucchelli 32',
-  floor: '1.º piso con ascensor',
-  /** Reserva de Booking.com confirmada: entrada vie 30 oct desde las 14:00, salida mar 3 nov de 08:00 a 11:00. */
-  reception: 'Check-in desde las 14:00 · salida de 08:00 a 11:00 (recepción 08:00–16:00, según la ficha del hotel)',
+  address: 'Via Zucchelli 32, 00187 Roma',
+  floor: '1.º piso con ascensor; fuera no hay cartel del hotel',
+  /** Reserva de Booking.com confirmada: entrada vie 30 oct desde las 14:00, salida mar 3 nov a las 05:30 (check-out la víspera). */
+  reception: 'Check-in de 14:00 a 19:00 (más tarde, avisar antes) · check-out de 08:00 a 10:30; si salís antes de las 08:00, el check-out se hace la víspera antes de las 19:00 (email del hotel, 24 oct)',
   /** Lo que se enseña al taxista (F21). */
   taxiText: 'Via Zucchelli 32, vicino alla metro Barberini',
   phone: '+39 351 247 3415' as string | undefined,

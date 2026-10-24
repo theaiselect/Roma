@@ -36,7 +36,7 @@ const MONUMENT_COORDS: Record<string, [number, number]> = {
 
 export const places: Place[] = [
   // ── Alojamiento ───────────────────────────────────────────────
-  { id: 'hotel-soha', name: 'Soha Piazza di Spagna Boutique', kind: 'hotel', address: 'Via Zucchelli 32 (1.º piso, ascensor), junto al metro Barberini', verified: false, note: 'Coordenadas, teléfono y email: verificar' },
+  { id: 'hotel-soha', name: 'Soha Piazza di Spagna Boutique', kind: 'hotel', address: 'Via Zucchelli 32, 00187 Roma (1.º piso, ascensor), junto al metro Barberini', verified: false, note: 'Fuera no hay cartel del hotel: buscar el portal n.º 32. Coordenadas sin verificar' },
 
   // ── Comida, café, helado ──────────────────────────────────────
   { id: 'pinsere', name: 'Pinsere', kind: 'food', address: 'Via Flavia 98', lat: 41.9076155, lng: 12.4977767, hours: { mon: '10:00-21:00', tue: '10:00-21:00', wed: '10:00-21:00', thu: '10:00-21:00', fri: '10:00-21:00' }, pricePPCents: 900, verified: false, source: DOC },
