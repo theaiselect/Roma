@@ -14,10 +14,10 @@ export const itinerary: Stop[] = [
   { id: 'd1-pincio', day: 1, start: '16:45', placeId: 'pincio', title: 'Mirador del Pincio' },
   { id: 'd1-popolo', day: 1, start: '17:30', placeId: 'piazza-popolo', title: 'Piazza del Popolo y Santa Maria del Popolo', note: 'Caravaggio' },
   { id: 'd1-spagna', day: 1, start: '18:30', placeId: 'piazza-spagna', title: 'Plaza de España y Via Condotti', note: 'No sentarse en la escalinata' },
-  { id: 'd1-roscioli', day: 1, start: '21:00', placeId: 'roscioli-salumeria', title: 'Cena en Roscioli Salumeria', ticketId: 'roscioli', note: 'Trevi queda a 15 min a pie', planB: [
+  { id: 'd1-roscioli', day: 1, start: '21:30', placeId: 'roscioli-salumeria', title: 'Cena en Roscioli Salumeria', ticketId: 'roscioli', note: 'La reserva online solo da 19:00, 21:30 o 21:45. Trevi queda a 15 min a pie', planB: [
     { placeId: 'armando-pantheon', reason: 'Si no hay mesa' },
   ] },
-  { id: 'd1-trevi', day: 1, start: '22:30', placeId: 'trevi', title: 'Fontana di Trevi', note: 'Gratis después de las 22:00 (2 € de 9 a 22; viernes desde 11:30)' },
+  { id: 'd1-trevi', day: 1, start: '23:15', placeId: 'trevi', title: 'Fontana di Trevi', note: 'Gratis después de las 22:00 (2 € de 9 a 22; viernes desde 11:30)' },
 
   // ── II · Sábado 31 de octubre ─────────────────────────────────
   { id: 'd2-regoli', day: 2, start: '07:15', placeId: 'regoli', title: 'Desayuno en Regoli', note: 'Pedir maritozzo. Efectivo en barra. Después, paseo por Via Merulana' },
@@ -73,7 +73,9 @@ export const itinerary: Stop[] = [
   { id: 'd4-vittoriano', day: 4, start: '16:40', placeId: 'vittoriano', title: 'Terraza del Vittoriano', note: 'Reducida 5 €' },
   { id: 'd4-campidoglio', day: 4, start: '17:45', placeId: 'campidoglio', title: 'Campidoglio', note: 'Vistas del Foro al anochecer' },
   { id: 'd4-boccione', day: 4, start: '18:15', placeId: 'boccione', title: 'Boccione', note: 'Lunes hasta las 19:00 · solo efectivo' },
-  { id: 'd4-taverna', day: 4, start: '20:30', placeId: 'taverna-fori', title: 'Cena en Taverna dei Fori Imperiali', ticketId: 'taverna' },
+  { id: 'd4-carbonara', day: 4, start: '20:30', placeId: 'la-carbonara-monti', title: 'Cena en La Carbonara (Monti)', ticketId: 'carbonara', note: 'Última comanda 21:30', planB: [
+    { placeId: 'dar-bruttone', reason: 'Si no hay mesa (también se reserva online)' },
+  ] },
 
   // ── V · Martes 3 de noviembre ─────────────────────────────────
   { id: 'd5-alarm', day: 5, start: '05:00', title: 'Alarma', note: 'Mochilas hechas la noche antes', leg: true },
