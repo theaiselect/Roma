@@ -17,7 +17,8 @@ import { downloadWiki, wikiStatus } from '@/lib/wiki';
 //  · si un espejo tarda más de HEDGE_MS en empezar a responder, se pregunta también al siguiente y gana el primero;
 //  · un error (429, 502, «runtime error») pasa al siguiente espejo al momento;
 //  · como mucho OVERPASS_SLOTS consultas a la vez, para no saturar a nadie (cada etapa encola sus trozos).
-export const OVERPASS_MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.openstreetmap.fr/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+// Orden según la comprobación del 24 oct: openstreetmap.fr 0,7 s; private.coffee 74 s; overpass-api.de no conectó; kumi agotó 90 s.
+export const OVERPASS_MIRRORS = ['https://overpass.openstreetmap.fr/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 export const HEDGE_MS = 12_000;
 export const OVERPASS_SLOTS = 3;
 const BEST_KEY = 'roma-overpass-best';

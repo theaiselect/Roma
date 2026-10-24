@@ -14,26 +14,49 @@ globalThis.fetch = (input, init = {}) => {
   return nodeFetch(input, { ...init, headers });
 };
 
-import { fetchGraph, fetchPlaces, GRAPH_VERSION, overpass, type OfflinePack } from '@/lib/offline-data';
-import { packGraph } from '@/lib/graph';
+import { graphArea, GRAPH_VERSION, mirrorOrder, overpassRace, parsePlaces, parseWays, placesQuery, splitBbox, wayQuery, type OfflinePack } from '@/lib/offline-data';
+import { buildGraph, packGraph } from '@/lib/graph';
 import { metroQuery, parseMetro } from '@/lib/metro-map';
-import { EXTRA_GEO, overpassQuery, parseOverpass, searchPlaces } from '@/lib/osm';
+import { EXTRA_GEO, overpassQuery, parseOverpass, ROME_BBOX, searchPlaces } from '@/lib/osm';
 
 const log = (t: string) => { console.log(t); if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `- ${t}\n`); };
-const timed = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
-  const t0 = Date.now();
-  const r = await fn();
-  log(`${name}: ${((Date.now() - t0) / 1000).toFixed(1)} s`);
-  return r;
-};
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Aquí no hay prisa: trozos más pequeños, más tiempo por consulta, reintentos y pocas consultas a la vez.
+async function ask<T>(name: string, query: string): Promise<T> {
+  let last: unknown;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const t0 = Date.now();
+    try {
+      const { data, url } = await overpassRace<T>(query, mirrorOrder(null), 240_000, 30_000);
+      log(`${name}: ${new URL(url).host}, ${((Date.now() - t0) / 1000).toFixed(1)} s${attempt > 1 ? ` (intento ${attempt})` : ''}`);
+      return data;
+    } catch (e) { last = e; console.log(`… ${name} intento ${attempt}: ${String(e)}`); await sleep(20_000 * attempt); }
+  }
+  throw last instanceof Error ? last : new Error(name);
+}
+async function each<A, B>(items: A[], n: number, fn: (a: A, i: number) => Promise<B>): Promise<B[]> {
+  const out: B[] = new Array(items.length);
+  let i = 0;
+  await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) { const k = i++; out[k] = await fn(items[k]!, k); } }));
+  return out;
+}
+type Els = { elements?: never[] };
 
 it('prepara el paquete sin conexión', async () => {
-  const [graph, places, poisRaw, metroRaw] = await Promise.all([
-    timed('calles', () => fetchGraph()),
-    timed('sitios', () => fetchPlaces()),
-    timed('puntos', () => overpass<Parameters<typeof parseOverpass>[0]>(overpassQuery(), 90_000)),
-    timed('metro', () => overpass<Parameters<typeof parseMetro>[0]>(metroQuery(), 90_000)),
+  const t0 = Date.now();
+  const wayParts = splitBbox(graphArea(), 6, 6);
+  const placeParts = splitBbox(ROME_BBOX, 3, 3);
+  const [ways, placeChunks, poisRaw, metroRaw] = await Promise.all([
+    each(wayParts, 2, (b, i) => ask<Els>(`calles ${i + 1}/${wayParts.length}`, wayQuery(b)).then(parseWays)),
+    each(placeParts, 1, (b, i) => ask<Els>(`sitios ${i + 1}/${placeParts.length}`, placesQuery(b)).then(parsePlaces)),
+    ask<Els>('puntos', overpassQuery()),
+    ask<Els>('metro', metroQuery()),
   ]);
+  log(`Overpass en total: ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  const graph = buildGraph(ways.flat());
+  const seen = new Set<string>();
+  const places = placeChunks.flat().filter((p) => { const k = `${p.n}|${p.lat}|${p.lng}`; if (seen.has(k)) return false; seen.add(k); return true; });
   const pois = parseOverpass(poisRaw);
   const metro = parseMetro(metroRaw);
   const geo: NonNullable<OfflinePack['geo']> = {};
