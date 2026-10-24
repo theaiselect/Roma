@@ -23,7 +23,17 @@ export function stagesNeeded(s: OfflineStatus, now: number): Stage[] {
 }
 
 export type AutoPhase = 'idle' | 'running' | 'waiting-wifi' | 'offline' | 'done' | 'error';
-export interface AutoState { phase: AutoPhase; stage?: Stage; done: number; total: number; failed: Stage[]; ranHere: boolean }
+export interface StageProgress { done: number; total: number; end?: 'ok' | 'fail' }
+export interface AutoState {
+  phase: AutoPhase;
+  /** La última etapa que avisó de progreso (las etapas van a la vez). */
+  stage?: Stage;
+  done: number; total: number; failed: Stage[]; ranHere: boolean;
+  /** Etapas de esta descarga y cómo va cada una. */
+  need?: Stage[];
+  progress?: Partial<Record<Stage, StageProgress>>;
+  startedAt?: number;
+}
 
 let state: AutoState = { phase: 'idle', done: 0, total: 1, failed: [], ranHere: false };
 let running = false;
@@ -31,25 +41,49 @@ let retries = 0;
 const listeners = new Set<() => void>();
 const set = (patch: Partial<AutoState>) => { state = { ...state, ...patch }; listeners.forEach((l) => l()); };
 
+/** Porcentaje total (cada etapa pesa igual; una terminada cuenta entera). */
+export function overallPct(s: Pick<AutoState, 'need' | 'progress'>): number {
+  const need = s.need ?? [];
+  if (!need.length) return 0;
+  const sum = need.reduce((a, st) => {
+    const p = s.progress?.[st];
+    return a + (p?.end ? 1 : p ? Math.min(p.done / Math.max(p.total, 1), 0.99) : 0);
+  }, 0);
+  return Math.round((sum / need.length) * 100);
+}
+
+/** Etapas que se están bajando ahora mismo. */
+export const activeStages = (s: Pick<AutoState, 'need' | 'progress'>): Stage[] => (s.need ?? []).filter((st) => !s.progress?.[st]?.end);
+
 interface Conn extends EventTarget { saveData?: boolean; type?: string }
 const connection = (): Conn | undefined => (navigator as unknown as { connection?: Conn }).connection;
 
-/** Descarga lo que falte. `force` ignora la espera de wifi y vuelve a bajarlo todo. */
-export async function runAuto(force = false): Promise<void> {
+export const ALL_STAGES: Stage[] = ['map', 'graph', 'places', 'pois', 'metro', 'photos', 'weather', 'files'];
+
+/**
+ * Descarga lo que falte. Sin `mode` respeta la espera de wifi. `missing`: ya, aunque sean datos móviles, solo lo que
+ * falta. `all`: ya, y vuelve a bajarlo todo.
+ */
+export async function runAuto(mode?: 'missing' | 'all'): Promise<void> {
   if (running) return;
   if (!navigator.onLine) { set({ phase: 'offline' }); return; }
   const c = connection();
-  if (!force && (c?.saveData || c?.type === 'cellular')) { set({ phase: 'waiting-wifi' }); return; }
+  if (!mode && (c?.saveData || c?.type === 'cellular')) { set({ phase: 'waiting-wifi' }); return; }
   let need: Stage[];
   try {
-    need = force ? ['map', 'graph', 'places', 'pois', 'metro', 'photos', 'weather', 'files'] : stagesNeeded(await offlineStatus(), Date.now());
+    need = mode === 'all' ? ALL_STAGES : stagesNeeded(await offlineStatus(), Date.now());
   } catch { return; }
   if (!need.length) { set({ phase: state.ranHere ? 'done' : 'idle', failed: [] }); return; }
   running = true;
-  set({ phase: 'running', done: 0, total: 1, failed: [], stage: need[0] });
+  let progress: Partial<Record<Stage, StageProgress>> = {};
+  set({ phase: 'running', done: 0, total: 1, failed: [], stage: need[0], need, progress, startedAt: Date.now() });
   void navigator.storage?.persist?.().catch(() => undefined);
   try {
-    const failed = await prepareOffline((stage, done, total) => set({ stage, done, total }), undefined, need);
+    const failed = await prepareOffline(
+      (stage, done, total) => { progress = { ...progress, [stage]: { done, total } }; set({ stage, done, total, progress }); },
+      undefined, need,
+      (stage, ok) => { progress = { ...progress, [stage]: { ...(progress[stage] ?? { done: 1, total: 1 }), end: ok ? 'ok' : 'fail' } }; set({ progress }); },
+    );
     set({ phase: failed.length ? 'error' : 'done', failed, ranHere: true });
     if (failed.length && retries++ < 3) window.setTimeout(() => void runAuto(), 5 * 60_000);
     if (!failed.length) retries = 0;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { Icon } from '@/components/Icon';
 import { offlineStatus, STAGE_LABEL, type OfflineStatus, type Stage } from '@/lib/offline-data';
-import { runAuto, useAutoOffline } from '@/lib/auto-offline';
+import { activeStages, overallPct, runAuto, useAutoOffline, type AutoState } from '@/lib/auto-offline';
 import { estimateMB } from '@/lib/offline-map';
 import { travellers } from '@/data/trip';
 import { useSettings } from '@/lib/settings';
@@ -34,40 +34,69 @@ export function rows(s: OfflineStatus): Row[] {
   ];
 }
 
+const mmss = (ms: number) => { const t = Math.max(0, Math.round(ms / 1000)); return t < 60 ? `${t} s` : `${Math.floor(t / 60)} min ${String(t % 60).padStart(2, '0')} s`; };
+
+/** Cómo va una etapa mientras se descarga: «120 de 441», «bajando…» o nada si no entra en esta descarga. */
+export function liveText(a: AutoState, st: Stage): string | null {
+  if (a.phase !== 'running' || !a.need?.includes(st)) return null;
+  const p = a.progress?.[st];
+  if (p?.end) return p.end === 'ok' ? 'recién descargado' : 'no se pudo, se reintentará';
+  if (!p || p.total <= 1) return 'descargando…';
+  return `descargando ${p.done} de ${p.total}`;
+}
+
+/** Un segundo que pasa (para el «lleva 1 min 20 s»). */
+function useTick(on: boolean): number {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!on) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [on]);
+  return now;
+}
+
 export function OfflineCard() {
   const [st, setSt] = useState<OfflineStatus | undefined>();
   const auto = useAutoOffline();
-  const cur = auto.phase === 'running' ? { stage: auto.stage ?? 'map', done: auto.done, total: auto.total } : null;
+  const cur = auto.phase === 'running';
+  const now = useTick(cur);
   const failed = auto.phase === 'error' ? auto.failed : [];
   const online = useOnline();
   const me = useSettings().profile ?? 'jesus';
   const other = travellers[me === 'jesus' ? 'lucia' : 'jesus'].name;
   const refresh = () => offlineStatus().then(setSt).catch(() => undefined);
   useEffect(() => { void refresh(); }, [auto.phase]);
-  const go = () => void runAuto(true);
   const all = st ? rows(st).every((r) => r.ok) : false;
+  const go = () => void runAuto(all ? 'all' : 'missing');
   return (
     <section class="card stack" style={{ gap: '0.5rem' }} aria-label="Preparar para ir sin conexión">
       <h2>Sin conexión</h2>
       <p class="small">{all ? 'Todo listo: sin datos podéis ver el mapa, calcular rutas, buscar sitios y abrir las entradas.' : auto.phase === 'waiting-wifi' ? 'Se descargará sola en cuanto haya wifi (o pulsa el botón).' : 'Se descarga sola, en segundo plano, cuando hay conexión. No tienes que hacer nada.'}</p>
       {st && (
         <ul class="list" style={{ gap: '0.25rem' }}>
-          {rows(st).map((r) => (
-            <li key={r.stage} class="row" style={{ alignItems: 'flex-start', gap: '0.5rem' }}>
-              <span class={`chip ${r.ok ? 'ok' : 'pending'}`} aria-label={r.ok ? 'Descargado' : 'Falta'}>{r.ok ? '✓' : '·'}</span>
-              <span class="small"><b>{STAGE_LABEL[r.stage]}</b> <span class="muted">— {r.text}. Sirve para {r.need}.</span></span>
-            </li>
-          ))}
+          {rows(st).map((r) => {
+            const live = liveText(auto, r.stage);
+            const busy = !!live && !auto.progress?.[r.stage]?.end;
+            const ok = auto.progress?.[r.stage]?.end === 'ok' || (r.ok && !busy);
+            return (
+              <li key={r.stage} class="row" style={{ alignItems: 'flex-start', gap: '0.5rem' }}>
+                <span class={`chip ${ok ? 'ok' : 'pending'}`} aria-label={ok ? 'Descargado' : busy ? 'Descargando' : 'Falta'}>{ok ? '✓' : busy ? '↓' : '·'}</span>
+                <span class="small"><b>{STAGE_LABEL[r.stage]}</b> <span class="muted">— {live ?? r.text}. Sirve para {r.need}.</span></span>
+              </li>
+            );
+          })}
         </ul>
       )}
       {cur && (
         <div role="status">
-          <p class="small">{STAGE_LABEL[cur.stage]}… {Math.round((cur.done / Math.max(cur.total, 1)) * 100)} %</p>
-          <progress value={cur.done} max={cur.total} aria-label="Descargando" style={{ width: '100%' }} />
+          <p class="small">Descargando: {overallPct(auto)} % · ahora {activeStages(auto).map((x) => STAGE_LABEL[x].toLowerCase()).join(', ') || 'terminando'}{auto.startedAt ? ` · lleva ${mmss(now - auto.startedAt)}` : ''}</p>
+          <progress value={overallPct(auto)} max={100} aria-label="Descargando" style={{ width: '100%' }} />
+          <p class="small muted">Deja la app abierta hasta que termine.</p>
         </div>
       )}
       {failed.length > 0 && <p class="small pending">No se ha podido descargar: {failed.map((f) => STAGE_LABEL[f]).join(', ')}. Se reintentará sola; también puedes pulsar el botón.</p>}
-      <button type="button" class="btn primary" disabled={!!cur || !online} onClick={go}>
+      <button type="button" class="btn primary" disabled={cur || !online} onClick={go}>
         <Icon name="map" /> {cur ? 'Descargando…' : all ? 'Actualizar todo' : 'Descargar ahora'}
       </button>
       {!online && <p class="small muted">Sin conexión ahora mismo.</p>}

@@ -290,3 +290,14 @@ export function routeLeg(g: Graph, from: LatLng, to: LatLng): OfflineLeg | null 
 export interface StoredGraph { v: 1; n: number; lat: Int32Array; lng: Int32Array; off: Int32Array; to: Int32Array; len: Float32Array; cls: Uint8Array; nm: Int32Array; names: string[] }
 export const toStored = (g: Graph): StoredGraph => ({ v: 1, ...g });
 export const fromStored = (s: StoredGraph | undefined): Graph | null => (s && s.v === 1 && s.n > 0 ? s : null);
+
+/** El grafo en JSON (para el paquete ya preparado que se sirve desde la propia app). */
+export interface PackedGraph { n: number; lat: number[]; lng: number[]; off: number[]; to: number[]; len: number[]; cls: number[]; nm: number[]; names: string[] }
+export const packGraph = (g: Graph): PackedGraph => ({
+  n: g.n, lat: Array.from(g.lat), lng: Array.from(g.lng), off: Array.from(g.off), to: Array.from(g.to),
+  len: Array.from(g.len, (x) => Math.round(x * 10) / 10), cls: Array.from(g.cls), nm: Array.from(g.nm), names: g.names,
+});
+export const unpackGraph = (p: PackedGraph): Graph => ({
+  n: p.n, lat: Int32Array.from(p.lat), lng: Int32Array.from(p.lng), off: Int32Array.from(p.off), to: Int32Array.from(p.to),
+  len: Float32Array.from(p.len), cls: Uint8Array.from(p.cls), nm: Int32Array.from(p.nm), names: p.names,
+});

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { Icon } from '@/components/Icon';
 import { STAGE_LABEL } from '@/lib/offline-data';
-import { runAuto, startAutoOffline, useAutoOffline } from '@/lib/auto-offline';
+import { activeStages, overallPct, runAuto, startAutoOffline, useAutoOffline } from '@/lib/auto-offline';
 
 /** Aviso discreto bajo la barra superior: la descarga para ir sin conexión se hace sola y aquí se ve cómo va. */
 export function OfflineBanner() {
@@ -16,11 +16,11 @@ export function OfflineBanner() {
   }, [s.phase, s.ranHere]);
 
   if (s.phase === 'running') {
-    const pct = Math.round((s.done / Math.max(s.total, 1)) * 100);
+    const now = activeStages(s).map((st) => STAGE_LABEL[st]).slice(0, 2).join(', ');
     return (
       <div class="offlinebar" role="status" aria-live="polite">
         <Icon name="map" size={16} />
-        <span>Guardando Roma para usarla sin conexión · {s.stage ? STAGE_LABEL[s.stage] : ''} {pct} %</span>
+        <span>Guardando Roma para usarla sin conexión · {overallPct(s)} %{now ? ` · ${now}` : ''}</span>
       </div>
     );
   }
@@ -29,7 +29,7 @@ export function OfflineBanner() {
       <div class="offlinebar" role="status">
         <Icon name="map" size={16} />
         <span>Roma se guardará sola cuando haya wifi.</span>
-        <button type="button" class="btn ghost" onClick={() => void runAuto(true)}>Guardar ya</button>
+        <button type="button" class="btn ghost" onClick={() => void runAuto('missing')}>Guardar ya</button>
       </div>
     );
   }

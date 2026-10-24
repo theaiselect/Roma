@@ -110,6 +110,11 @@ export async function cachedMetro(): Promise<MetroData | null> {
 export async function downloadMetro(fetchOverpass: (q: string) => Promise<{ elements?: El[] }>): Promise<MetroData> {
   const data = parseMetro(await fetchOverpass(metroQuery()));
   if (!data) throw new Error('Sin datos del metro');
+  return saveMetro(data);
+}
+
+/** Guarda el metro ya preparado (del paquete de la app o de Overpass). */
+export async function saveMetro(data: MetroData): Promise<MetroData> {
   await setMeta(KEY, data);
   publish(data);
   return data;

@@ -60,7 +60,7 @@ def mock(route):
         lats=[float(x) for x in parse_qs(urlparse(u).query)['latitude'][0].split(',')]
         return j({'elevation':[round(30+(41.91-la)*2000) for la in lats]})
     if 'open-meteo.com' in u: return j({'daily':{'time':['2026-10-31'],'weather_code':[1],'temperature_2m_max':[20],'temperature_2m_min':[11],'precipitation_probability_max':[10]}})
-    if 'overpass-api.de' in u:
+    if '/api/interpreter' in u:  # cualquier espejo de Overpass
         from urllib.parse import unquote_plus; q=unquote_plus(route.request.post_data or '')
         if 'route"="subway' in q: return j(METRO)
         if 'out tags geom' in q: return j(WAYS)
@@ -72,8 +72,10 @@ with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/opt/pw-browsers/chromium',args=['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     ctx=b.new_context(viewport={'width':412,'height':900},is_mobile=True,has_touch=True,locale='es-ES',timezone_id='Europe/Madrid',service_workers='block',
                       permissions=['geolocation'],geolocation={'latitude':41.9060,'longitude':12.4823})
-    for host in ['tiles.openfreemap.org','photon.komoot.io','routing.openstreetmap.de','overpass-api.de','api.open-meteo.com','es.wikipedia.org','upload.wikimedia.org']:
+    for host in ['tiles.openfreemap.org','photon.komoot.io','routing.openstreetmap.de','overpass-api.de','overpass.openstreetmap.fr','overpass.private.coffee','overpass.kumi.systems','api.open-meteo.com','es.wikipedia.org','upload.wikimedia.org']:
         ctx.route(f'**://{host}/**',mock)
+    # Sin el paquete ya preparado: esta prueba usa los datos falsos de Overpass de arriba.
+    ctx.route('**/offline/roma.json',lambda r: r.fulfill(status=404,body=''))
     pg=ctx.new_page(); errs=[]
     pg.on('pageerror',lambda e:errs.append(str(e))); pg.on('console',lambda m:print('CONSOLE',m.text[:300]) if 'offline' in m.text else None)
     pg.goto(f'{BASE}/?now={NOW}')

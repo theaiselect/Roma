@@ -185,6 +185,13 @@ export async function refreshPois(force = false, now = Date.now()): Promise<PoiC
   return next;
 }
 
+/** Guarda puntos ya preparados (del paquete de la app). */
+export async function savePois(pois: Poi[], now = Date.now()): Promise<PoiCache> {
+  const next = { at: now, pois };
+  await setMeta(POI_KEY, next);
+  return next;
+}
+
 export function nearest(pois: Poi[], kind: PoiKind, from: LatLng, limit = 12): { poi: Poi; d: number }[] {
   return pois
     .filter((p) => p.kind === kind)
