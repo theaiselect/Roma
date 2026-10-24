@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { balance, customSplit, equalSplit, foodSpentByDay, light, parseEuros, plannedFoodByDay, type ExpenseLike } from '@/lib/money';
+import { budget } from '@/data/trip';
 
 const exp = (o: Partial<ExpenseLike>): ExpenseLike => ({ amountCents: 1000, paidBy: 'jesus', split: equalSplit(1000, 'jesus'), category: 'comida', day: 1, ...o });
 
@@ -49,12 +50,12 @@ describe('presupuesto semáforo', () => {
     expect(light(1101, 1000)).toBe('vino');
   });
 
-  it('el plan de comida sale del itinerario (~193 € por persona)', () => {
+  it('el plan de comida sale del itinerario (230 € por persona)', () => {
     const plan = plannedFoodByDay();
     const total = Object.values(plan).reduce((a, b) => a + b, 0);
     expect(plan[2]).toBe(600 + 2900 + 2600 + 800);
-    expect(total).toBeGreaterThan(15000);
-    expect(total).toBeLessThan(20000);
+    expect(total).toBe(budget.foodPlannedPPCents);
+    expect(total).toBeLessThanOrEqual(budget.foodCapPPCents);
   });
 
   it('cuenta la parte de cada uno en comida por día', () => {

@@ -14,11 +14,13 @@ export const itinerary: Stop[] = [
   { id: 'd1-pincio', day: 1, start: '16:45', placeId: 'pincio', title: 'Mirador del Pincio' },
   { id: 'd1-popolo', day: 1, start: '17:30', placeId: 'piazza-popolo', title: 'Piazza del Popolo y Santa Maria del Popolo', note: 'Caravaggio' },
   { id: 'd1-spagna', day: 1, start: '18:30', placeId: 'piazza-spagna', title: 'Plaza de España y Via Condotti', note: 'No sentarse en la escalinata' },
-  { id: 'd1-peroni', day: 1, start: '21:00', placeId: 'antica-birreria-peroni', title: 'Cena en Antica Birreria Peroni' },
+  { id: 'd1-roscioli', day: 1, start: '21:00', placeId: 'roscioli-salumeria', title: 'Cena en Roscioli Salumeria', ticketId: 'roscioli', note: 'Trevi queda a 15 min a pie', planB: [
+    { placeId: 'armando-pantheon', reason: 'Si no hay mesa' },
+  ] },
   { id: 'd1-trevi', day: 1, start: '22:30', placeId: 'trevi', title: 'Fontana di Trevi', note: 'Gratis después de las 22:00 (2 € de 9 a 22; viernes desde 11:30)' },
 
   // ── II · Sábado 31 de octubre ─────────────────────────────────
-  { id: 'd2-regoli', day: 2, start: '07:15', placeId: 'regoli', title: 'Desayuno en Regoli', note: 'Efectivo en barra. Después, paseo por Via Merulana' },
+  { id: 'd2-regoli', day: 2, start: '07:15', placeId: 'regoli', title: 'Desayuno en Regoli', note: 'Pedir maritozzo. Efectivo en barra. Después, paseo por Via Merulana' },
   { id: 'd2-colosseo', day: 2, start: '08:30', placeId: 'colosseo', title: 'Coliseo + Arco de Constantino', ticketId: 'colosseo', note: 'Nominativa: llevar DNI. Horario de invierno desde el 25 oct: última entrada 15:30, cierre 16:30' },
   { id: 'd2-palatino', day: 2, start: '10:15', placeId: 'palatino', title: 'Palatino', ticketId: 'colosseo', note: 'Misma entrada' },
   { id: 'd2-foro', day: 2, start: '11:30', placeId: 'foro-romano', title: 'Foro Romano', ticketId: 'colosseo', note: 'Salir por el Campidoglio' },
