@@ -31,7 +31,7 @@ Auth: cabecera `x-trip-code` (api/_auth.ts normaliza: minúsculas, sin espacios,
 - Lucía llega a Termini a las 11:45 el 30; quedan en **Termini**.
 - Vuelos: Sevilla→Fiumicino 30 oct 9:30; Fiumicino→Madrid 3 nov 9:00. Alarma 05:00 el martes; metro 05:35; recepción del hotel cerrada de noche (pedir cómo dejar la llave).
 - Entradas: Panteón comprado (lun 2, 15:00–16:00). Coliseo: van a por Full Experience Arena el sáb 31. Galleria Borghese agotada → plan B Palazzo Barberini (dom 1).
-- Cenas (horas en el plan): vie Roscioli Salumeria 21:00 (sin reservar; plan B Armando al Pantheon) · sáb Felice a Testaccio 21:00 · dom Ai Marmi 21:00 · lun Taverna dei Fori Imperiali 20:30.
+- Cenas (horas en el plan): vie Roscioli Salumeria 21:30 (reserva online; plan B Armando al Pantheon) · sáb Felice a Testaccio 21:00 · dom Ai Marmi 21:00 · lun La Carbonara (Monti) 20:30 (reserva online; plan B Dar Bruttone). Taverna dei Fori salió porque solo reserva por teléfono y Jesús no quiere llamar.
 
 ## Pendiente (del usuario)
 - Reservar: Felice (+39 06 574 6800), Taverna (+39 06 679 8643), Museos Vaticanos lun 2 a las 8:00 (1 Intero + 1 Ridotto, ~40 €).
