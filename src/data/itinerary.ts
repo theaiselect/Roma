@@ -8,7 +8,9 @@ export const itinerary: Stop[] = [
   { id: 'd1-leonardo', day: 1, start: '13:15', approx: true, placeId: 'termini', title: 'Leonardo Express FCO → Termini', note: '32 min, 14 €; andenes 23–24 en Termini', leg: true },
   { id: 'd1-lucia', day: 1, start: '13:50', placeId: 'termini', title: 'Encuentro con Lucía', note: 'Lucía llega a Termini a las 11:45, unas 2 h antes que Jesús', leg: true },
   { id: 'd1-hotel', day: 1, placeId: 'hotel-soha', title: 'Metro A Termini → Barberini, dejar mochilas', leg: true },
-  { id: 'd1-pinsere', day: 1, start: '14:30', placeId: 'pinsere', title: 'Comida en Pinsere' },
+  { id: 'd1-piccolo-buco', day: 1, start: '14:30', placeId: 'piccolo-buco', title: 'Comida en Piccolo Buco', note: 'Cierra a las 15:00: no llegar más tarde de las 14:45', planB: [
+    { placeId: 'pinsere', reason: 'Si llegáis tarde o hay mucha cola' },
+  ] },
   { id: 'd1-latte', day: 1, start: '15:30', placeId: 'come-il-latte', title: 'Helado en Come il Latte' },
   { id: 'd1-borghese', day: 1, start: '16:00', placeId: 'villa-borghese', title: 'Paseo por Villa Borghese' },
   { id: 'd1-pincio', day: 1, start: '16:45', placeId: 'pincio', title: 'Mirador del Pincio' },
@@ -40,9 +42,11 @@ export const itinerary: Stop[] = [
   { id: 'd2-trapizzino', day: 2, start: '00:30', afterMidnight: true, placeId: 'trapizzino-testaccio', title: 'Trapizzino Testaccio', note: 'Sábado hasta 01:00. Vuelta: Línea B (Piramide) → Termini → Línea A, hasta 01:30' },
 
   // ── III · Domingo 1 de noviembre (festivo: Ognissanti) ────────
-  { id: 'd3-faro', day: 3, start: '09:00', placeId: 'faro', title: 'Desayuno en Faro Caffè Specialty' },
+  { id: 'd3-desayuno', day: 3, start: '09:00', title: 'Desayuno en un bar cerca del hotel', note: 'Cappuccino y cornetto en barra, unos 2–3 €' },
   { id: 'd3-barberini', day: 3, start: '10:00', placeId: 'palazzo-barberini', title: 'Palazzo Barberini', note: 'Gratis el primer domingo; verificar que abre en festivo. Plan B de la Borghese (agotada): seguir mirando tosc.it' },
-  { id: 'd3-guerra', day: 3, start: '13:00', placeId: 'pastificio-guerra', title: 'Comida en Pastificio Guerra', note: 'No comer en la escalinata' },
+  { id: 'd3-pastasciutta', day: 3, start: '13:00', placeId: 'pastasciutta-trevi', title: 'Comida en Pastasciutta', note: 'Pasta fresca hecha al momento. Puede haber cola de ~30 min; poco sitio para sentarse', planB: [
+    { placeId: 'pastificio-guerra', reason: 'Si la cola es muy larga' },
+  ] },
   { id: 'd3-postre', day: 3, start: '14:00', placeId: 'two-sizes', title: 'Postre en Two Sizes o Frigidarium', planB: [
     { placeId: 'frigidarium', reason: 'Alternativa en la misma calle' },
   ] },

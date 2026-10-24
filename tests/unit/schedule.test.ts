@@ -39,7 +39,7 @@ describe('próxima parada (F01)', () => {
 
   it('entre días, la siguiente es la primera del día siguiente', () => {
     const s = nowState(tl, romeToUtc('2026-11-01', '03:00'));
-    expect(s.next?.id).toBe('d3-faro');
+    expect(s.next?.id).toBe('d3-desayuno');
   });
 
   it('después de la última parada no hay siguiente', () => {
