@@ -36,7 +36,7 @@ Auth: cabecera `x-trip-code` (api/_auth.ts normaliza: minúsculas, sin espacios,
 
 ## Pendiente (del usuario)
 - Ya reservado (24 oct): Coliseo, Felice y Tarjeta Sanitaria pedida. Falta: Armando al Pantheon y La Carbonara (online). Museos Vaticanos y Sixtina: agotados, no entran (decisión de Jesús, 24 oct); el lunes por la mañana es San Pedro y la cúpula. Lista de pendientes con casillas: https://claude.ai/artifact/2XMtffoCBNPWVsH38DNRjE
-- Billete Madrid→Plasencia (3 nov): aún no comprado.
+- Billetes comprados (24 oct): bus Alsa Plasencia→Sevilla 30 oct 03:05 y tren Renfe Madrid-Atocha→Plasencia 3 nov 16:38 (enlace en Monfragüe, llega 19:54).
 - Mensaje al hotel (mochilas el viernes, llave el martes, tasa turística).
 - «Sorpasso»: restaurante que aparece solo en la auditoría original (domingo cerrado); no está en los datos. Preguntar si lo quieren y añadir con horario real.
 

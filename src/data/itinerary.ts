@@ -2,7 +2,7 @@ import type { Stop } from './types';
 
 export const itinerary: Stop[] = [
   // ── I · Viernes 30 de octubre ─────────────────────────────────
-  { id: 'd1-bus', day: 1, start: '03:05', end: '07:35', placeId: 'plaza-armas', title: 'Bus Plasencia → Sevilla', note: 'Llega 07:35 a Plaza de Armas', leg: true, pending: 'hora y número de billete' },
+  { id: 'd1-bus', day: 1, start: '03:05', end: '07:35', placeId: 'plaza-armas', title: 'Bus Plasencia → Sevilla', note: 'Alsa, sale de la estación de autobuses (C/ Tornavacas 2). Bus 5, asiento 25. Llega 07:35 a Plaza de Armas', leg: true, ticketId: 'bus-sevilla' },
   { id: 'd1-uber', day: 1, start: '07:40', placeId: 'svq', title: 'Uber Reserve a SVQ', note: 'Cancelación gratis hasta 1 h antes; mirar el bus a las 06:30; plan B taxi tarifa fija ~25 €', leg: true },
   { id: 'd1-flight', day: 1, start: '09:30', end: '12:35', placeId: 'fco', title: 'Ryanair SVQ → FCO', note: 'Llega 12:35; solo mochila 40×30×20', leg: true },
   { id: 'd1-leonardo', day: 1, start: '13:15', approx: true, placeId: 'termini', title: 'Leonardo Express FCO → Termini', note: '32 min, 14 €; andenes 23–24 en Termini', leg: true },
@@ -83,6 +83,6 @@ export const itinerary: Stop[] = [
   { id: 'd5-metro', day: 5, start: '05:35', placeId: 'barberini-metro', title: 'Metro A Barberini → Termini', note: 'Plan B: taxi a las 05:45, tarifa fija 55 € al aeropuerto', leg: true },
   { id: 'd5-leonardo', day: 5, start: '06:05', end: '06:37', placeId: 'fco', title: 'Leonardo Express → FCO', note: 'Llega 06:37', leg: true },
   { id: 'd5-flight', day: 5, start: '09:00', end: '11:30', placeId: 'mad-t1', title: 'Ryanair FCO → Madrid T1', note: 'Llega ~11:30', leg: true },
-  { id: 'd5-madrid', day: 5, start: '12:00', approx: true, title: 'Madrid: T1 → lanzadera gratis a T4 → Cercanías C1', note: 'A Atocha (Renfe) o Méndez Álvaro (Estación Sur, bus)', leg: true },
-  { id: 'd5-home', day: 5, start: '13:30', approx: true, title: 'Madrid → Plasencia', leg: true, pending: 'billete sin comprar' },
+  { id: 'd5-madrid', day: 5, start: '12:00', approx: true, title: 'Madrid: T1 → lanzadera gratis a T4 → Cercanías C1 a Atocha', note: 'El tren sale a las 16:38: hay unas 4 h libres en Madrid', leg: true },
+  { id: 'd5-home', day: 5, start: '16:38', end: '19:54', title: 'Tren Madrid → Plasencia', note: 'Alvia 00192 desde Madrid-Atocha Cercanías (coche 5, plaza 02C) hasta Monfragüe 19:19; enlace 19:30 a Plasencia, llega 19:54', leg: true, ticketId: 'madrid-plasencia' },
 ];
