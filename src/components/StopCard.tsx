@@ -22,6 +22,7 @@ export function PlaceFacts({ place }: { place: Place }) {
   return (
     <div class="stack" style={{ gap: '0.3rem' }}>
       {bits.length > 0 && <p class="small muted">{bits.join(' · ')}</p>}
+      {place.order?.length ? <p class="small">Pedir: {place.order.join(' · ')}</p> : null}
       <div class="row">
         {place.cashOnly && <span class="chip warn">Solo efectivo</span>}
       </div>

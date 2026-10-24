@@ -46,9 +46,9 @@ export const luciaTrain = {
 };
 
 export const budget = {
-  /** Comida: unos 193 € por persona en todo el viaje; tope 200 €. */
-  foodPlannedPPCents: 19300,
-  foodCapPPCents: 20000,
+  /** Comida: 230 € por persona en todo el viaje (subido el 24 oct para cenar en Roscioli el viernes). */
+  foodPlannedPPCents: 23000,
+  foodCapPPCents: 23000,
   drinksPerNightCents: { min: 1500, max: 2000 },
   tickets: {
     jesus: { minCents: 4600, maxCents: 5100 },

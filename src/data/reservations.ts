@@ -6,6 +6,7 @@ export const reservations: Reservation[] = [
   { id: 'colosseo', title: 'Coliseo · Full Experience Arena', status: 'todo', day: 2, time: '08:30', url: 'https://ticketing.colosseo.it', note: 'No quedaba Sotterranei e Arena: ir a por Arena para el sábado 31 (ya a la venta). Si no hay, entrada estándar de 24 h. Nominativa, llevar DNI.' },
   { id: 'borghese', title: 'Galleria Borghese', status: 'soldout', url: 'https://www.tosc.it', note: 'Agotada. Mirar cancelaciones; plan B: Palazzo Barberini.' },
   { id: 'pantheon', title: 'Panteón', status: 'bought', day: 4, time: '15:00', note: 'Franja 15:00–16:00, 2 entradas con descuento, 4 € en total.' },
+  { id: 'roscioli', title: 'Roscioli Salumeria (cena)', status: 'todo', day: 1, time: '21:00', phone: '+39 06 687 5287', url: 'https://www.salumeriaroscioli.com', note: 'Muy solicitado: reservar cuanto antes. Si no hay mesa: Armando al Pantheon, +39 06 6880 3034.' },
   { id: 'felice', title: 'Felice a Testaccio', status: 'todo', day: 2, time: '21:00', phone: '+39 06 574 6800' },
   { id: 'taverna', title: 'Taverna dei Fori Imperiali', status: 'todo', day: 4, time: '20:30', phone: '+39 06 679 8643' },
   { id: 'uber', title: 'Uber Reserve 07:40 en Plaza de Armas', status: 'todo', day: 1, time: '07:40' },
