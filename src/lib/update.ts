@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'preact/hooks';
+
 // «Buscar versión nueva»: pide al service worker que mire si hay una versión más reciente de la app.
 // 'new' = descargada y lista para usar · 'failed' = la hay, pero no se pudo descargar entera ·
 // 'slow' = la hay y se sigue descargando (el aviso «Hay una versión nueva» saldrá al terminar).
@@ -39,7 +41,7 @@ export async function checkForUpdate(opts: { onDownloading?: () => void; timeout
   const reg = await navigator.serviceWorker.getRegistration().catch(() => undefined);
   if (!reg) return 'unsupported';
   // Ya encontrada antes (al abrir la app): no hace falta ir a buscarla.
-  if (reg.waiting) return 'new';
+  if (reg.waiting) { setReady(true); return 'new'; }
   const found = nextUpdateFound(reg, 2500);
   try {
     await reg.update();
@@ -53,8 +55,9 @@ export async function checkForUpdate(opts: { onDownloading?: () => void; timeout
     // «ya tienes la última» mientras aún se estaba bajando.
     const end = await waitInstalled(sw, timeoutMs);
     if (end === 'timeout') return 'slow';
-    if (end === 'redundant' && !reg.waiting) return 'failed';
+    if (end === 'redundant' && !reg.waiting) { setReady(false); return 'failed'; }
   }
+  setReady(!!reg.waiting);
   return reg.waiting ? 'new' : 'latest';
 }
 
@@ -65,7 +68,7 @@ export async function applyUpdate(): Promise<boolean> {
   if (!('serviceWorker' in navigator)) return false;
   const reg = await navigator.serviceWorker.getRegistration().catch(() => undefined);
   const waiting = reg?.waiting;
-  if (!waiting) return false;
+  if (!waiting) { setReady(false); return false; }
   if (!applying) {
     applying = true;
     const reload = () => location.reload();
@@ -77,18 +80,55 @@ export async function applyUpdate(): Promise<boolean> {
   return true;
 }
 
-/** Al volver a la app (y como mucho cada 5 min) se busca versión nueva. Cuando una queda lista se llama a
- * `onWaiting` (el aviso de abajo): no se depende solo de workbox-window, que deja de escuchar tras la primera
- * versión que no ha pedido él mismo. */
-export function watchForUpdates(reg: ServiceWorkerRegistration, onWaiting: () => void, everyMs = 5 * 60_000): void {
-  if (reg.waiting) onWaiting();
+// Una sola fuente de verdad para el aviso de abajo y para Ajustes: hay versión nueva lista si, y solo si,
+// el service worker tiene una esperando (`reg.waiting`). Antes el aviso salía por su cuenta (workbox-window)
+// y podía decir «Hay una versión nueva» mientras Ajustes decía «Ya tienes la última versión».
+let ready = false;
+const subs = new Set<(v: boolean) => void>();
+
+function setReady(v: boolean): void {
+  if (v === ready) return;
+  ready = v;
+  subs.forEach((f) => f(v));
+}
+
+/** Vuelve a mirar si hay una versión esperando (sin ir a buscar al servidor). */
+export async function refreshUpdateReady(): Promise<boolean> {
+  if (!('serviceWorker' in navigator)) return false;
+  const reg = await navigator.serviceWorker.getRegistration().catch(() => undefined);
+  setReady(!!reg?.waiting);
+  return ready;
+}
+
+export function useUpdateReady(): boolean {
+  const [v, setV] = useState(ready);
+  useEffect(() => {
+    subs.add(setV);
+    setV(ready);
+    return () => { subs.delete(setV); };
+  }, []);
+  return v;
+}
+
+/** Al volver a la app (y como mucho cada 5 min) se busca versión nueva. El estado «hay versión lista» se
+ * recalcula con cada cambio del service worker, así que el aviso y Ajustes siempre dicen lo mismo. */
+export function watchForUpdates(reg: ServiceWorkerRegistration, everyMs = 5 * 60_000): void {
+  const watchWaiting = () => {
+    setReady(!!reg.waiting);
+    // Si la versión que esperaba deja de hacerlo (se activa o la sustituye otra), el aviso se va.
+    reg.waiting?.addEventListener('statechange', () => setReady(!!reg.waiting));
+  };
+  watchWaiting();
   reg.addEventListener('updatefound', () => {
     const sw = reg.installing;
-    if (sw) void waitInstalled(sw, 10 * 60_000).then(() => { if (reg.waiting) onWaiting(); });
+    if (sw) void waitInstalled(sw, 10 * 60_000).then(watchWaiting);
   });
+  navigator.serviceWorker.addEventListener('controllerchange', () => setReady(!!reg.waiting));
   let last = Date.now();
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible' || !navigator.onLine || Date.now() - last < everyMs) return;
+    if (document.visibilityState !== 'visible') return;
+    setReady(!!reg.waiting);
+    if (!navigator.onLine || Date.now() - last < everyMs) return;
     last = Date.now();
     reg.update().catch(() => { /* sin red: ya se mirará la próxima vez */ });
   });

@@ -15,7 +15,7 @@ import { canShareFile, downloadFile, FileReady } from '@/components/FileShare';
 import { checkConnection, type ConnectionReport } from '@/lib/connection';
 import { useLocal } from '@/lib/local';
 import { useOnline } from '@/lib/online';
-import { applyUpdate, checkForUpdate, type UpdateResult } from '@/lib/update';
+import { applyUpdate, checkForUpdate, useUpdateReady, type UpdateResult } from '@/lib/update';
 
 declare const __APP_VERSION__: string;
 
@@ -81,7 +81,10 @@ export function SettingsScreen() {
   const [syncing, setSyncing] = useState(false);
   const [testing, setTesting] = useState(false);
   const [report, setReport] = useState<ConnectionReport | null>(null);
-  const [upd, setUpd] = useState<UpdateResult | 'checking' | 'downloading' | null>(null);
+  const [checked, setUpd] = useState<UpdateResult | 'checking' | 'downloading' | null>(null);
+  // Lo que se enseña sale del mismo estado que el aviso de abajo: si hay versión lista, aquí también.
+  const updateReady = useUpdateReady();
+  const upd = updateReady ? 'new' : checked === 'new' ? 'latest' : checked;
   const online = useOnline();
   const [preparing, setPreparing] = useState(false);
   const [backupFile, setBackupFile] = useState<File | null>(null);
@@ -145,7 +148,7 @@ export function SettingsScreen() {
         <div id="instalar"><InstallCard /></div>
         <Status />
         {upd === 'new'
-          ? <button type="button" class="btn primary" onClick={() => void applyUpdate().then((ok) => { if (!ok) setUpd('latest'); })}>Actualizar ahora</button>
+          ? <button type="button" class="btn primary" onClick={() => void applyUpdate()}>Actualizar ahora</button>
           : <button type="button" class="btn" disabled={upd === 'checking' || upd === 'downloading'} onClick={lookForUpdate}>{upd === 'checking' ? 'Buscando…' : upd === 'downloading' ? 'Descargando la versión nueva…' : 'Buscar versión nueva'}</button>}
         {upd && upd !== 'checking' && (
           <p class="small" role="status">{UPDATE_TEXT[upd]}</p>

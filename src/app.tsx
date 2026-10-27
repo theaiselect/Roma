@@ -10,7 +10,7 @@ import { usePresencePing } from '@/lib/presence';
 import { useSettings } from '@/lib/settings';
 import { useSyncStatus } from '@/lib/sync-status';
 import { requestSync } from '@/lib/sync';
-import { applyUpdate, watchForUpdates } from '@/lib/update';
+import { applyUpdate, useUpdateReady, watchForUpdates } from '@/lib/update';
 import { Onboarding } from '@/screens/Onboarding';
 import { Today } from '@/screens/Today';
 
@@ -58,7 +58,8 @@ function TabBar() {
   );
 }
 
-function Shell({ needRefresh, updateServiceWorker }: { needRefresh: boolean; updateServiceWorker: (reload?: boolean) => Promise<void> }) {
+function Shell() {
+  const updateReady = useUpdateReady();
   usePresencePing();
   return (
     <div class="app">
@@ -93,10 +94,10 @@ function Shell({ needRefresh, updateServiceWorker }: { needRefresh: boolean; upd
       <LostButton />
       <TabBar />
       <TicketViewer />
-      {needRefresh && (
+      {updateReady && (
         <div class="update" role="status">
           <span>Hay una versión nueva</span>
-          <button type="button" class="btn primary" onClick={() => void applyUpdate().then((ok) => { if (!ok) void updateServiceWorker(true); })}>Actualizar</button>
+          <button type="button" class="btn primary" onClick={() => void applyUpdate()}>Actualizar</button>
         </div>
       )}
     </div>
@@ -108,10 +109,11 @@ export function App() {
   // El service worker se registra desde la primera pantalla (también en el onboarding):
   // así la app se cachea para usarla sin conexión y Chrome puede ofrecer instalarla.
   // La app instalada casi nunca se vuelve a abrir desde cero: al volver a ella se mira si hay versión nueva.
-  const { needRefresh: [needRefresh, setNeedRefresh], updateServiceWorker } = useRegisterSW({ onRegisteredSW: (_url, reg) => { if (reg) watchForUpdates(reg, () => setNeedRefresh(true)); } });
+  // El aviso «Hay una versión nueva» no usa `needRefresh` de workbox-window: sale de `useUpdateReady`, lo mismo que Ajustes.
+  useRegisterSW({ onRegisteredSW: (_url, reg) => { if (reg) watchForUpdates(reg); } });
   return (
     <LocationProvider>
-      {s.onboarded && s.profile ? <Shell needRefresh={needRefresh} updateServiceWorker={updateServiceWorker} /> : <Onboarding />}
+      {s.onboarded && s.profile ? <Shell /> : <Onboarding />}
     </LocationProvider>
   );
 }
